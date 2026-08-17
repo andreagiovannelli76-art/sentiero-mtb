@@ -3,7 +3,7 @@
 // ATTENZIONE alla procedura di release: a ogni pubblicazione va incrementato N in
 // "sentiero-vN", altrimenti i dispositivi continuano a servire la versione vecchia.
 
-const V = "sentiero-v4";
+const V = "sentiero-v5";
 
 const SHELL = [
   "./",
@@ -18,6 +18,7 @@ const SHELL = [
   "./js/share.js",
   "./js/elevation.js",
   "./js/osm.js",
+  "./js/follow.js",
   "./manifest.webmanifest",
   // Icone e percorso demo: senza questi, al primo avvio offline mancano
   // l'icona della PWA e l'unico percorso con cui provare l'app.

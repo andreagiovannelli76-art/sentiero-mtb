@@ -8,13 +8,14 @@ telefono o sul computer che stai usando. È una scelta di prodotto, non una funz
 
 Open source, licenza MIT. Di Andrea Giovannelli, Ascoli Piceno.
 
-Versione: **0.4.3 beta**.
+Versione: **0.4.4 beta**.
 
 ---
 
 ## Cosa fa
 
 - **Registra** un giro con il GPS, con wake lock per tenere lo schermo acceso
+- **Segui un percorso**: quanto manca, quanto devi ancora salire, e un avviso quando ti allontani più di 40 m dalla traccia
 - **Importa ed esporta GPX** (Garmin, Komoot, Strava e chiunque altro)
 - **Statistiche**: distanza, D+ / D−, quota massima, pendenza massima, difficoltà, durata
 - **Profilo altimetrico** sincronizzato con la mappa: passi il dito sul profilo, il punto si accende sulla mappa
@@ -49,6 +50,7 @@ js/tracker.js         geolocalizzazione e wake lock
 js/share.js           traccia compressa nell'URL (#r=...)
 js/elevation.js       Open-Elevation
 js/osm.js             Overpass: relation route=mtb / route=bicycle, concatenazione delle way
+js/follow.js          guida lungo un percorso: scarto dalla traccia, quanto manca, quanto sali
 sw.js                 service worker (cache del guscio)
 manifest.webmanifest  PWA
 icons/                icon-192, icon-512, icon.svg (sorgente delle altre due)

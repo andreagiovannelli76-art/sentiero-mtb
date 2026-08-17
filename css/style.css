@@ -85,6 +85,44 @@ body {
 }
 .icona:active { background: rgba(239, 234, 223, 0.14); }
 
+/* ---------- barra della guida ---------- */
+
+.guida {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 12px;
+  background: var(--moss);
+  color: var(--chalk);
+  z-index: 900;
+}
+
+/* Fuori percorso: il colore cambia perché l'avviso si veda con un'occhiata,
+   in movimento, senza doverlo leggere. */
+.guida.fuori { background: #8E3B2E; }
+
+.guida-dati {
+  flex: 1 1 auto;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  min-width: 0;
+}
+.guida-dati span {
+  display: block;
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  opacity: 0.75;
+}
+.guida-dati strong { font-size: 15px; font-variant-numeric: tabular-nums; }
+
+.guida .btn {
+  color: var(--chalk);
+  border-color: rgba(239, 234, 223, 0.4);
+}
+
 /* ---------- corpo ---------- */
 
 main {

@@ -164,6 +164,38 @@ export class Tracker {
   }
 }
 
+// Osservazione continua della posizione senza registrare nulla: la usa la
+// guida, che deve sapere dove sei ma non accumula una traccia.
+// Ritorna la funzione con cui fermarla.
+export function osservaPosizione(onPosizione, onErrore) {
+  if (!("geolocation" in navigator)) {
+    if (onErrore) onErrore(new Error("Questo browser non espone la geolocalizzazione."));
+    return () => {};
+  }
+
+  const id = navigator.geolocation.watchPosition(
+    (pos) => onPosizione({ lat: pos.coords.latitude, lon: pos.coords.longitude, acc: pos.coords.accuracy }),
+    (err) => { if (onErrore) onErrore(err); },
+    { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 }
+  );
+
+  return () => navigator.geolocation.clearWatch(id);
+}
+
+// Tiene acceso lo schermo finché si segue un percorso. Ritorna la funzione
+// che rilascia il blocco. Il Tracker ne gestisce uno suo per la
+// registrazione: qui serve anche a chi segue senza registrare.
+export async function tieniSchermoAcceso() {
+  if (!("wakeLock" in navigator)) return () => {};
+  try {
+    const blocco = await navigator.wakeLock.request("screen");
+    return () => blocco.release().catch(() => {});
+  } catch (e) {
+    // Su iOS può fallire senza conseguenze.
+    return () => {};
+  }
+}
+
 // Posizione singola, per "percorsi vicino a me" e per centrare la mappa.
 export function posizioneAttuale(opzioni = {}) {
   return new Promise((risolvi, rifiuta) => {

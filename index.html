@@ -24,13 +24,22 @@
     <img src="icons/icon.svg" alt="" width="30" height="30">
     <div>
       <h1>SENTIERO</h1>
-      <p class="sottotitolo">Percorsi MTB · open source · v0.4.3 beta</p>
+      <p class="sottotitolo">Percorsi MTB · open source · v0.4.4 beta</p>
     </div>
   </div>
   <button id="btn-report" class="icona" title="Segnala un problema su WhatsApp" aria-label="Segnala un problema">⚑</button>
 </header>
 
 <main>
+  <div id="guida" class="guida" hidden>
+    <div class="guida-dati">
+      <div><span>Mancano</span><strong id="g-rimanente">—</strong></div>
+      <div><span>Salita</span><strong id="g-salita">—</strong></div>
+      <div><span>Scarto</span><strong id="g-scarto">—</strong></div>
+    </div>
+    <button class="btn piccolo fantasma" id="btn-esci-guida">Esci</button>
+  </div>
+
   <div id="mappa" role="application" aria-label="Mappa dei percorsi"></div>
 
   <section id="pannello" class="pannello" hidden>
@@ -110,6 +119,7 @@
       <canvas id="profilo" class="profilo" height="130" aria-label="Profilo altimetrico"></canvas>
 
       <div class="azioni azioni-dettaglio">
+        <button class="btn primario" id="btn-segui">Segui</button>
         <button class="btn primario" id="btn-salva" hidden>Salva nella libreria</button>
         <button class="btn" id="btn-quote">Correggi quote</button>
         <button class="btn" id="btn-condividi">Condividi link</button>

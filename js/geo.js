@@ -202,9 +202,12 @@ export function douglasPeucker(punti, tolleranza = 8) {
   return punti.filter((_, i) => tieni[i]);
 }
 
-// Distanza punto-segmento in metri, proiezione equirettangolare locale:
-// alle scale di un giro in MTB l'errore è trascurabile.
-function distanzaDaSegmento(p, a, b) {
+// Proiezione di un punto su un segmento, in coordinate equirettangolari
+// locali: alle scale di un giro in MTB l'errore è trascurabile.
+// Ritorna la distanza in metri e t, cioè quanto avanti si cade lungo il
+// segmento (0 = primo estremo, 1 = secondo). La guida usa t per sapere a che
+// punto del percorso ci si trova, non solo quale punto è il più vicino.
+export function proiettaSuSegmento(p, a, b) {
   const k = Math.cos(rad(a.lat));
   const px = rad(p.lon - a.lon) * k * R_TERRA;
   const py = rad(p.lat - a.lat) * R_TERRA;
@@ -212,11 +215,14 @@ function distanzaDaSegmento(p, a, b) {
   const by = rad(b.lat - a.lat) * R_TERRA;
 
   const len2 = bx * bx + by * by;
-  if (len2 === 0) return Math.hypot(px, py);
+  if (len2 === 0) return { distanza: Math.hypot(px, py), t: 0 };
 
-  let t = (px * bx + py * by) / len2;
-  t = Math.max(0, Math.min(1, t));
-  return Math.hypot(px - bx * t, py - by * t);
+  const t = Math.max(0, Math.min(1, (px * bx + py * by) / len2));
+  return { distanza: Math.hypot(px - bx * t, py - by * t), t };
+}
+
+function distanzaDaSegmento(p, a, b) {
+  return proiettaSuSegmento(p, a, b).distanza;
 }
 
 // Centro geometrico di una traccia, per centrare la mappa.

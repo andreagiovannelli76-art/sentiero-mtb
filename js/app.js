@@ -11,12 +11,13 @@ import {
   haversine,
 } from "./geo.js";
 import { Profilo } from "./profile.js";
-import { Tracker, posizioneAttuale } from "./tracker.js";
+import { Tracker, posizioneAttuale, osservaPosizione, tieniSchermoAcceso } from "./tracker.js";
+import { Guida } from "./follow.js";
 import { creaLink, leggiLink, LIMITE_URL } from "./share.js";
 import { correggiQuote } from "./elevation.js";
 import { cercaPercorsi } from "./osm.js";
 
-export const APP_VERSION = "0.4.3-beta";
+export const APP_VERSION = "0.4.4-beta";
 
 // Numero del canale feedback beta. Pubblico nel sorgente: è una scelta consapevole.
 const REPORT_WA = "393484791772";
@@ -38,6 +39,7 @@ const stato = {
   attivoSalvato: false,
   risultatiOsm: [],
   ultimoAggiornamentoLive: 0,
+  guida: null,
 };
 
 let mappa;
@@ -47,6 +49,8 @@ let layerRegistrazione = null;
 let marcatorePosizione = null;
 let profilo = null;
 let tracker = null;
+let fermaOsservazione = null;
+let rilasciaSchermo = null;
 
 const el = (id) => document.getElementById(id);
 
@@ -418,6 +422,88 @@ async function cerca(lat, lon) {
   }
 }
 
+// ---------------------------------------------------------------- guida
+
+async function avviaGuida() {
+  if (!stato.attivo) return;
+  fermaGuida(false);
+
+  stato.guida = new Guida(stato.attivo);
+  disegnaTraccia(stato.attivo.punti);
+  el("guida").hidden = false;
+  mostraVista("mappa");
+
+  rilasciaSchermo = await tieniSchermoAcceso();
+  fermaOsservazione = osservaPosizione(
+    (posizione) => aggiornaGuida(posizione),
+    (err) => {
+      // Sotto un bosco il GPS sparisce e torna in continuazione: allarmare
+      // a ogni buco renderebbe l'avviso rumore da ignorare. Si segnala solo
+      // il permesso negato, che è l'unico caso in cui l'utente deve agire.
+      if (err && err.code === 1) {
+        avvisa("Permesso di geolocalizzazione negato: la guida non può funzionare.", true);
+        fermaGuida(false);
+      }
+    }
+  );
+
+  avvisa(`Segui «${stato.attivo.nome}». Ti avviso se ti allontani dalla traccia.`);
+}
+
+function aggiornaGuida(posizione) {
+  if (!stato.guida) return;
+  const s = stato.guida.aggiorna(posizione);
+
+  el("g-rimanente").textContent = formattaDistanza(s.rimanente);
+  el("g-salita").textContent =
+    s.salitaRimanente === null ? "—" : `${Math.round(s.salitaRimanente)} m`;
+  el("g-scarto").textContent = `${Math.round(s.scarto)} m`;
+  el("guida").classList.toggle("fuori", s.fuoriPercorso);
+
+  mostraPosizione(posizione);
+  mappa.panTo([posizione.lat, posizione.lon], { animate: false });
+
+  // Si avvisa solo quando lo stato cambia, non a ogni lettura del GPS.
+  if (s.appenaUscito) {
+    avvisa("Fuori percorso: sei a più di 40 m dalla traccia.", true);
+    vibra([200, 100, 200]);
+  } else if (s.appenaRientrato) {
+    avvisa("Di nuovo in traccia.");
+    vibra(80);
+  }
+
+  if (s.arrivato) {
+    avvisa("Sei in fondo al percorso.");
+    fermaGuida(false);
+  }
+}
+
+function fermaGuida(conAvviso = true) {
+  if (fermaOsservazione) {
+    fermaOsservazione();
+    fermaOsservazione = null;
+  }
+  if (rilasciaSchermo) {
+    rilasciaSchermo();
+    rilasciaSchermo = null;
+  }
+
+  stato.guida = null;
+  el("guida").hidden = true;
+  el("guida").classList.remove("fuori");
+  if (conAvviso) avvisa("Guida terminata.");
+}
+
+// Su Android vibra, su iOS no: è un di più, non un canale su cui contare.
+function vibra(schema) {
+  if (!navigator.vibrate) return;
+  try {
+    navigator.vibrate(schema);
+  } catch (e) {
+    /* niente: la vibrazione non è essenziale */
+  }
+}
+
 // ---------------------------------------------------------------- azioni dettaglio
 
 async function salvaAttivo() {
@@ -539,6 +625,7 @@ async function eliminaAttivo() {
   );
   if (!ok) return;
 
+  if (stato.guida) fermaGuida(false);
   await db.elimina(stato.attivo.id);
   stato.attivo = null;
   stato.attivoSalvato = false;
@@ -666,6 +753,8 @@ function collegaEventi() {
     }
   });
 
+  el("btn-segui").addEventListener("click", avviaGuida);
+  el("btn-esci-guida").addEventListener("click", () => fermaGuida());
   el("btn-salva").addEventListener("click", salvaAttivo);
   el("btn-quote").addEventListener("click", correggiQuoteAttivo);
   el("btn-condividi").addEventListener("click", condividiAttivo);
