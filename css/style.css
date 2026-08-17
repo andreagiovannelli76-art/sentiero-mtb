@@ -96,16 +96,25 @@ main {
 
 #mappa {
   flex: 1 1 auto;
+  /* Quota minima garantita: sui telefoni con la tacca, installati da Home,
+     barra di sistema e barra gesti si prendono ~80 px e senza questa riga
+     la mappa scenderebbe sotto un terzo dello schermo. Il pannello cede.
+     dvh e non vh: in Safari vh misura lo schermo con le barre già scomparse. */
   min-height: 140px;
+  min-height: 40vh;
+  min-height: 40dvh;
   background: #DCE5DA;
 }
 
 .pannello {
-  flex: 0 0 auto;
-  /* Il pannello si dimensiona sul proprio contenuto: senza un tetto basso la
-     scheda di dettaglio si prende mezzo schermo e la mappa resta un francobollo.
-     Quello che avanza va alla mappa, che è il motivo per cui si apre l'app. */
+  /* Si dimensiona sul proprio contenuto ma può essere compresso: senza un tetto
+     basso la scheda di dettaglio si prende mezzo schermo e la mappa resta un
+     francobollo. Quello che avanza va alla mappa, che è il motivo per cui si
+     apre l'app; il contenuto in eccesso scorre. */
+  flex: 0 1 auto;
+  min-height: 0;
   max-height: 42vh;
+  max-height: 42dvh;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   background: var(--carta);
