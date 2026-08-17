@@ -16,7 +16,7 @@ import { creaLink, leggiLink, LIMITE_URL } from "./share.js";
 import { correggiQuote } from "./elevation.js";
 import { cercaPercorsi } from "./osm.js";
 
-export const APP_VERSION = "0.4-beta";
+export const APP_VERSION = "0.4.1-beta";
 
 // Numero del canale feedback beta. Pubblico nel sorgente: è una scelta consapevole.
 const REPORT_WA = "393484791772";
@@ -410,7 +410,7 @@ async function cerca(lat, lon) {
       ul.appendChild(li);
     }
 
-    avvisa(`${risultati.length} percorsi trovati.`);
+    avvisa(risultati.length === 1 ? "1 percorso trovato." : `${risultati.length} percorsi trovati.`);
   } catch (e) {
     avvisa(e.message || "Ricerca non riuscita.", true);
   } finally {

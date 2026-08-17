@@ -20,7 +20,9 @@ export async function cercaPercorsi(lat, lon, raggio = 8000) {
   relation(around:${Math.round(raggio)},${lat.toFixed(5)},${lon.toFixed(5)})["route"="mtb"];
   relation(around:${Math.round(raggio)},${lat.toFixed(5)},${lon.toFixed(5)})["route"="bicycle"]["network"~"lcn|rcn"];
 );
-out tags geom;`;
+out body geom;`;
+// "body" e non "tags": tags stampa id e tag ma OMETTE i membri della relazione,
+// e senza membri non arriva nessuna geometria da cui ricavare la traccia.
 
   const dati = await interroga(query);
   const elementi = (dati && dati.elements) || [];
