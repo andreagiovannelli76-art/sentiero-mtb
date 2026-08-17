@@ -1,0 +1,4 @@
+# Il contesto di progetto non va servito online: contiene note interne
+# (ID del team Vercel, decisioni aperte, roadmap). Resta nel repository,
+# che è pubblico e open source, ma non diventa una pagina del sito.
+CLAUDE.md
