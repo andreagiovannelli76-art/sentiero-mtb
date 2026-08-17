@@ -125,7 +125,8 @@ Principio: **prima i percorsi esistenti (OSM), poi la community, poi il premium.
 | Ver. | Cosa | Note |
 |---|---|---|
 | 0.4 ✅ | Percorsi pubblici OSM (Overpass + overlay Waymarked Trails) | pronta |
-| 0.5 | Fix dai feedback tester · guida primo avvio (3 schermate) · "percorsi vicino a me" ordinati per distanza GPS | il "segui percorso" era previsto qui: anticipato in 0.4.4 |
+| 0.5 ✅ | **Segui percorso** (scarto dalla traccia, quanto manca, salita residua) · fix dai feedback: ricerca OSM che non trovava nulla, dislivello dichiarato zero sui percorsi senza quote, query Overpass più leggera | rilasciata |
+| 0.5.x | Guida primo avvio (3 schermate) · "percorsi vicino a me" ordinati per distanza GPS | erano previsti in 0.5, non ci sono entrati |
 | 0.6 | Backend Supabase: auth, libreria pubblica condivisa, "rendi pubblico" un giro, foto, autore, like/commenti | trasforma il tool in community |
 | 0.7 | Schede guida: descrizione tecnica, POI (fontane, rifugi, punti pericolosi), stagionalità | base per le guide |
 | 0.8 | Guide premium: flag `premium`, Stripe, accesso a pagamento · tile offline per zona | monetizzazione |
