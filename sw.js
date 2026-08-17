@@ -19,6 +19,12 @@ const SHELL = [
   "./js/elevation.js",
   "./js/osm.js",
   "./manifest.webmanifest",
+  // Icone e percorso demo: senza questi, al primo avvio offline mancano
+  // l'icona della PWA e l'unico percorso con cui provare l'app.
+  "./icons/icon.svg",
+  "./icons/icon-192.png",
+  "./icons/icon-512.png",
+  "./data/monte-ascensione.gpx",
 ];
 
 self.addEventListener("install", (e) => {

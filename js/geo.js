@@ -37,6 +37,12 @@ export function progressive(punti) {
 // Soglia in metri sotto la quale una variazione di quota è considerata rumore GPS.
 const SOGLIA_QUOTA = 3;
 
+// Lunghezza della finestra su cui si misura la pendenza massima.
+// Misurarla fra due punti consecutivi è inaffidabile: un GPS che sbaglia la quota
+// di 5 m su 10 m di percorso dichiara il 50%. Su 100 m lo stesso errore pesa il 5%,
+// e la finestra non dipende da quanto sono fitti i punti della traccia.
+const FINESTRA_PENDENZA = 100;
+
 // Statistiche complete di un giro.
 // Ritorna { distanza, dPiu, dMeno, quotaMin, quotaMax, pendenzaMax, difficolta, durata }
 export function statistiche(punti) {
@@ -47,10 +53,11 @@ export function statistiche(punti) {
   };
   if (!punti || punti.length < 2) return vuoto;
 
-  let distanza = 0;
+  const dist = progressive(punti);
+  const distanza = dist[dist.length - 1];
+
   let dPiu = 0;
   let dMeno = 0;
-  let pendenzaMax = 0;
   let quotaMin = Infinity;
   let quotaMax = -Infinity;
 
@@ -66,9 +73,6 @@ export function statistiche(punti) {
 
     if (i === 0) continue;
 
-    const d = haversine(punti[i - 1], punti[i]);
-    distanza += d;
-
     if (q !== null && riferimento !== null) {
       const scarto = q - riferimento;
       if (Math.abs(scarto) >= SOGLIA_QUOTA) {
@@ -79,14 +83,6 @@ export function statistiche(punti) {
     } else if (riferimento === null) {
       riferimento = q;
     }
-
-    // Pendenza massima: si ignorano i segmenti corti, dove il rumore di quota
-    // produrrebbe valori assurdi.
-    const qPrec = quotaDi(punti[i - 1]);
-    if (d > 15 && q !== null && qPrec !== null) {
-      const p = (Math.abs(q - qPrec) / d) * 100;
-      if (p > pendenzaMax) pendenzaMax = p;
-    }
   }
 
   return {
@@ -95,10 +91,45 @@ export function statistiche(punti) {
     dMeno: Math.round(dMeno),
     quotaMin: quotaMin === Infinity ? null : Math.round(quotaMin),
     quotaMax: quotaMax === -Infinity ? null : Math.round(quotaMax),
-    pendenzaMax: Math.round(pendenzaMax * 10) / 10,
+    pendenzaMax: pendenzaMassima(punti, dist),
     difficolta: difficolta(distanza / 1000, dPiu),
     durata: durata(punti),
   };
+}
+
+// Pendenza massima su finestre mobili di FINESTRA_PENDENZA metri.
+// Due indici che avanzano insieme: la traccia viene percorsa una volta sola.
+export function pendenzaMassima(punti, dist = progressive(punti)) {
+  let max = 0;
+  let j = 0;
+
+  for (let i = 0; i < punti.length - 1; i++) {
+    if (j < i) j = i;
+    while (j < punti.length - 1 && dist[j] - dist[i] < FINESTRA_PENDENZA) j++;
+
+    const d = dist[j] - dist[i];
+    // La finestra non si chiude più: da qui in poi resta solo la coda della traccia.
+    if (d < FINESTRA_PENDENZA) break;
+
+    const a = quotaDi(punti[i]);
+    const b = quotaDi(punti[j]);
+    if (a === null || b === null) continue;
+
+    const p = (Math.abs(b - a) / d) * 100;
+    if (p > max) max = p;
+  }
+
+  // Tracce più corte della finestra: si misura la pendenza sull'intero percorso.
+  if (max === 0) {
+    const totale = dist[dist.length - 1];
+    const a = quotaDi(punti[0]);
+    const b = quotaDi(punti[punti.length - 1]);
+    if (totale > 20 && a !== null && b !== null) {
+      max = (Math.abs(b - a) / totale) * 100;
+    }
+  }
+
+  return Math.round(max * 10) / 10;
 }
 
 function quotaDi(p) {

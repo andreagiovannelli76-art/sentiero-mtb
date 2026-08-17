@@ -108,10 +108,12 @@ npx vercel --prod
 - **Copertura OSM disomogenea:** Sibillini e ciclovie ottime, colline picene scarse. È il motivo per cui serve la community, non un difetto da correggere nel codice.
 - **Il link condivisibile contiene la traccia semplificata.** Oltre ~8000 caratteri l'app rimanda al GPX: è il comportamento voluto.
 
-## Debiti tecnici noti — da valutare, non urgenti
+## Debiti tecnici — chiusi in v0.4
 
-1. **Pendenza max inaffidabile.** In `js/geo.js` il calcolo filtra i segmenti con `d > 15` metri: sul GPX demo restituisce `90%`, e su tracce GPS reali con quote rumorose produrrà regolarmente valori assurdi (50–100%). I tester lo segnaleranno come bug. Ipotesi di fix: soglia a 40–50 m, oppure pendenza su finestre mobili di ~100 m.
-2. **Il service worker non mette in cache icone e GPX demo.** `SHELL` in `sw.js` elenca solo HTML/CSS/JS e il manifest: al primo avvio offline mancano l'icona PWA e il percorso dimostrativo. Aggiunta a basso rischio.
+1. ~~**Pendenza max inaffidabile.**~~ Risolto: `js/geo.js` non misura più la pendenza fra punti consecutivi, ma su **finestre mobili di 100 m** (`FINESTRA_PENDENZA`), con due indici che scorrono insieme sulla traccia. Non dipende più da quanto sono fitti i punti. Su una salita reale al 10% con quote sporcate da ±5 m di rumore il vecchio calcolo dichiarava `56%`, il nuovo `17,4%`; in pianura con lo stesso rumore si passa da `46,5%` a `8,1%`. Le tracce più corte di 100 m ricadono sulla pendenza dell'intero percorso.
+2. ~~**Il service worker non mette in cache icone e GPX demo.**~~ Risolto: `SHELL` in `sw.js` include ora `icons/` e `data/monte-ascensione.gpx`.
+
+Resta vero che **con quote GPS molto rumorose la pendenza massima è sovrastimata**: la finestra attenua il rumore, non lo elimina. Se i tester la segnalano ancora, la strada è filtrare le quote prima del calcolo — ma inciderebbe anche sul D+, quindi va deciso a parte.
 
 ---
 
