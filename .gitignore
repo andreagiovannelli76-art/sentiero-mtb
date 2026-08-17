@@ -1,0 +1,12 @@
+# Cartella locale del progetto Vercel: contiene l'ID del progetto e va tenuta
+# fuori dal repository. Regola non negoziabile: mai committare .vercel/ né token.
+.vercel/
+
+# Variabili d'ambiente, in qualsiasi forma
+.env
+.env.*
+
+# Residui dei sistemi operativi e degli editor
+.DS_Store
+Thumbs.db
+*.swp
