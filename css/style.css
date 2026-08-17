@@ -102,7 +102,10 @@ main {
 
 .pannello {
   flex: 0 0 auto;
-  max-height: 56vh;
+  /* Il pannello si dimensiona sul proprio contenuto: senza un tetto basso la
+     scheda di dettaglio si prende mezzo schermo e la mappa resta un francobollo.
+     Quello che avanza va alla mappa, che è il motivo per cui si apre l'app. */
+  max-height: 42vh;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   background: var(--carta);
@@ -393,13 +396,17 @@ main {
   box-shadow: 0 0 0 3px rgba(200, 139, 60, 0.35);
 }
 
-/* Su schermi larghi il pannello diventa una colonna laterale. */
-@media (min-width: 900px) {
+/* Su schermi larghi il pannello diventa una colonna laterale.
+   Vale anche per il telefono in orizzontale: lì l'altezza è poca e impilare
+   mappa e pannello lascerebbe alla mappa una striscia inutilizzabile. */
+@media (min-width: 900px), (min-width: 700px) and (max-height: 560px) {
   main { flex-direction: row-reverse; }
   .pannello {
     max-height: none;
-    width: 380px;
-    flex: 0 0 380px;
+    /* 380px sul desktop, ma mai più di un terzo abbondante dello schermo:
+       sul telefono in orizzontale una colonna fissa lascerebbe alla mappa
+       meno spazio del pannello. */
+    flex: 0 0 min(380px, 38%);
     border-top: 0;
     border-left: 1px solid var(--bordo);
     box-shadow: -6px 0 18px rgba(27, 38, 32, 0.06);
