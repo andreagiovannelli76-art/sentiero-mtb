@@ -47,7 +47,7 @@ const FINESTRA_PENDENZA = 100;
 // Ritorna { distanza, dPiu, dMeno, quotaMin, quotaMax, pendenzaMax, difficolta, durata }
 export function statistiche(punti) {
   const vuoto = {
-    distanza: 0, dPiu: 0, dMeno: 0,
+    distanza: 0, haQuote: false, dPiu: 0, dMeno: 0,
     quotaMin: null, quotaMax: null,
     pendenzaMax: 0, difficolta: "—", durata: null,
   };
@@ -85,14 +85,19 @@ export function statistiche(punti) {
     }
   }
 
+  // Un percorso preso da OSM ha solo latitudine e longitudine: dichiararlo
+  // permette alla UI di non spacciare uno zero per un dislivello misurato.
+  const haQuote = quotaMax !== -Infinity;
+
   return {
     distanza,
+    haQuote,
     dPiu: Math.round(dPiu),
     dMeno: Math.round(dMeno),
     quotaMin: quotaMin === Infinity ? null : Math.round(quotaMin),
     quotaMax: quotaMax === -Infinity ? null : Math.round(quotaMax),
     pendenzaMax: pendenzaMassima(punti, dist),
-    difficolta: difficolta(distanza / 1000, dPiu),
+    difficolta: haQuote ? difficolta(distanza / 1000, dPiu) : "—",
     durata: durata(punti),
   };
 }

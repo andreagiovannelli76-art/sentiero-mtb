@@ -71,7 +71,7 @@ export class Profilo {
       ctx.fillStyle = COLORE_TESTO;
       ctx.font = "13px system-ui, sans-serif";
       ctx.textAlign = "center";
-      ctx.fillText("Nessuna quota nella traccia", larghezza / 2, altezza / 2);
+      ctx.fillText("Nessuna quota — premi «Correggi quote»", larghezza / 2, altezza / 2);
       ctx.textAlign = "start";
       return;
     }

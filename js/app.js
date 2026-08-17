@@ -16,7 +16,7 @@ import { creaLink, leggiLink, LIMITE_URL } from "./share.js";
 import { correggiQuote } from "./elevation.js";
 import { cercaPercorsi } from "./osm.js";
 
-export const APP_VERSION = "0.4.2-beta";
+export const APP_VERSION = "0.4.3-beta";
 
 // Numero del canale feedback beta. Pubblico nel sorgente: è una scelta consapevole.
 const REPORT_WA = "393484791772";
@@ -265,8 +265,8 @@ function rinfrescaStatistiche() {
 
   const voci = [
     ["Distanza", formattaDistanza(s.distanza)],
-    ["D+", `${s.dPiu} m`],
-    ["D−", `${s.dMeno} m`],
+    ["D+", s.haQuote ? `${s.dPiu} m` : "—"],
+    ["D−", s.haQuote ? `${s.dMeno} m` : "—"],
     ["Quota max", s.quotaMax !== null ? `${s.quotaMax} m` : "—"],
     ["Pend. max", s.pendenzaMax ? `${s.pendenzaMax}%` : "—"],
     ["Difficoltà", s.difficolta],
