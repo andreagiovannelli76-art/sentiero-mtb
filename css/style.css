@@ -1,0 +1,408 @@
+/* SENTIERO — stili. Palette: pine, moss, dust, chalk. */
+
+:root {
+  --pine: #1B2620;
+  --moss: #3F5B37;
+  --dust: #C88B3C;
+  --chalk: #EFEADF;
+
+  --testo: #1B2620;
+  --testo-tenue: #5A6A5E;
+  --bordo: rgba(27, 38, 32, 0.14);
+  --fondo: #F7F4EC;
+  --carta: #FFFFFF;
+
+  --raggio: 10px;
+  --barra-h: 52px;
+  --tab-h: 58px;
+}
+
+* { box-sizing: border-box; }
+
+/* Le regole di layout qui sotto usano display:flex/grid, che ha la meglio
+   sull'hidden del browser: senza questa riga un pannello nascosto resterebbe
+   invisibile ma cliccabile, intercettando i tocchi su tutto il resto. */
+[hidden] { display: none !important; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+body {
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color: var(--testo);
+  background: var(--fondo);
+  display: flex;
+  flex-direction: column;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* ---------- barra superiore ---------- */
+
+.barra {
+  flex: 0 0 auto;
+  height: calc(var(--barra-h) + env(safe-area-inset-top));
+  padding: env(safe-area-inset-top) 12px 0 12px;
+  background: var(--pine);
+  color: var(--chalk);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  z-index: 1000;
+}
+
+.marchio { display: flex; align-items: center; gap: 9px; min-width: 0; }
+.marchio img { display: block; border-radius: 6px; }
+
+.barra h1 {
+  margin: 0;
+  font-size: 16px;
+  letter-spacing: 0.14em;
+  font-weight: 700;
+}
+
+.sottotitolo {
+  margin: 1px 0 0;
+  font-size: 10.5px;
+  color: rgba(239, 234, 223, 0.72);
+  letter-spacing: 0.01em;
+}
+
+.icona {
+  background: transparent;
+  border: 1px solid rgba(239, 234, 223, 0.3);
+  color: var(--chalk);
+  font-size: 17px;
+  line-height: 1;
+  width: 36px;
+  height: 34px;
+  border-radius: var(--raggio);
+  cursor: pointer;
+}
+.icona:active { background: rgba(239, 234, 223, 0.14); }
+
+/* ---------- corpo ---------- */
+
+main {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+#mappa {
+  flex: 1 1 auto;
+  min-height: 140px;
+  background: #DCE5DA;
+}
+
+.pannello {
+  flex: 0 0 auto;
+  max-height: 56vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  background: var(--carta);
+  border-top: 1px solid var(--bordo);
+  box-shadow: 0 -6px 18px rgba(27, 38, 32, 0.07);
+  padding: 12px 12px 16px;
+}
+
+.vista-testa {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.vista-testa h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.azioni-testa { display: flex; gap: 6px; }
+
+/* ---------- pulsanti ---------- */
+
+.btn {
+  font: inherit;
+  font-size: 13px;
+  padding: 9px 13px;
+  border-radius: var(--raggio);
+  border: 1px solid var(--bordo);
+  background: var(--carta);
+  color: var(--testo);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn:active { transform: translateY(1px); }
+.btn[disabled] { opacity: 0.45; cursor: default; }
+
+.btn.primario { background: var(--moss); border-color: var(--moss); color: var(--chalk); }
+.btn.pericolo { background: #8E3B2E; border-color: #8E3B2E; color: var(--chalk); }
+.btn.pericolo.fantasma { background: transparent; color: #8E3B2E; border-color: rgba(142, 59, 46, 0.4); }
+.btn.fantasma { background: transparent; }
+.btn.piccolo { padding: 6px 10px; font-size: 12px; }
+
+.azioni { display: flex; gap: 8px; flex-wrap: wrap; }
+.azioni-dettaglio { margin-top: 12px; }
+
+/* ---------- liste ---------- */
+
+.lista { list-style: none; margin: 0; padding: 0; }
+
+.lista li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 4px;
+  border-bottom: 1px solid var(--bordo);
+  cursor: pointer;
+}
+.lista li:active { background: rgba(63, 91, 55, 0.06); }
+
+.lista .nome {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 550;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lista .meta {
+  font-size: 11.5px;
+  color: var(--testo-tenue);
+  margin-top: 2px;
+  font-weight: 400;
+  white-space: normal;
+}
+
+.pillola {
+  flex: 0 0 auto;
+  font-size: 10.5px;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: rgba(63, 91, 55, 0.12);
+  color: var(--moss);
+  letter-spacing: 0.02em;
+}
+.pillola.osm { background: rgba(200, 139, 60, 0.18); color: #8A5A19; }
+
+.vuoto {
+  color: var(--testo-tenue);
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 14px 2px;
+}
+
+.nota {
+  color: var(--testo-tenue);
+  font-size: 12px;
+  line-height: 1.5;
+  margin: 10px 2px 0;
+}
+
+/* ---------- registrazione ---------- */
+
+.dati-live {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.dato {
+  background: rgba(63, 91, 55, 0.07);
+  border-radius: var(--raggio);
+  padding: 8px 6px;
+  text-align: center;
+}
+.dato .etichetta {
+  display: block;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--testo-tenue);
+}
+.dato strong { font-size: 15px; font-variant-numeric: tabular-nums; }
+
+/* ---------- dettaglio ---------- */
+
+.statistiche {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(84px, 1fr));
+  gap: 8px;
+}
+
+.statistiche .voce {
+  background: rgba(63, 91, 55, 0.07);
+  border-radius: var(--raggio);
+  padding: 8px 6px;
+  text-align: center;
+}
+.statistiche .voce span {
+  display: block;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--testo-tenue);
+}
+.statistiche .voce strong { font-size: 14px; font-variant-numeric: tabular-nums; }
+
+.profilo {
+  display: block;
+  width: 100%;
+  height: 130px;
+  margin-top: 12px;
+  border: 1px solid var(--bordo);
+  border-radius: var(--raggio);
+  background: var(--carta);
+  touch-action: pan-y;
+}
+
+.riga-form {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 10px 0;
+}
+.riga-form label { font-size: 12px; color: var(--testo-tenue); }
+.riga-form select {
+  font: inherit;
+  font-size: 13px;
+  padding: 8px 10px;
+  border-radius: var(--raggio);
+  border: 1px solid var(--bordo);
+  background: var(--carta);
+  color: var(--testo);
+}
+
+/* ---------- tab in basso ---------- */
+
+.tab {
+  flex: 0 0 auto;
+  height: calc(var(--tab-h) + env(safe-area-inset-bottom));
+  padding-bottom: env(safe-area-inset-bottom);
+  background: var(--pine);
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  z-index: 1000;
+}
+
+.tab button {
+  background: transparent;
+  border: 0;
+  color: rgba(239, 234, 223, 0.6);
+  font: inherit;
+  font-size: 10.5px;
+  letter-spacing: 0.02em;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  cursor: pointer;
+}
+.tab button .segno { font-size: 17px; line-height: 1; }
+.tab button.attivo { color: var(--chalk); }
+.tab button.attivo .segno { filter: drop-shadow(0 0 6px rgba(200, 139, 60, 0.5)); }
+.tab button.registrando { color: var(--dust); }
+
+/* ---------- avvisi e attesa ---------- */
+
+.toast {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(var(--tab-h) + env(safe-area-inset-bottom) + 14px);
+  max-width: min(92vw, 460px);
+  background: var(--pine);
+  color: var(--chalk);
+  font-size: 13px;
+  line-height: 1.45;
+  padding: 10px 14px;
+  border-radius: var(--raggio);
+  box-shadow: 0 8px 22px rgba(27, 38, 32, 0.3);
+  z-index: 3000;
+}
+.toast.errore { background: #8E3B2E; }
+
+.velo {
+  position: fixed;
+  inset: 0;
+  background: rgba(27, 38, 32, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 4000;
+}
+
+.lavoro {
+  background: var(--carta);
+  border-radius: 14px;
+  padding: 20px 26px;
+  text-align: center;
+  max-width: 80vw;
+}
+.lavoro p { margin: 12px 0 0; font-size: 13px; color: var(--testo-tenue); }
+
+.rotella {
+  width: 26px;
+  height: 26px;
+  margin: 0 auto;
+  border: 3px solid rgba(63, 91, 55, 0.2);
+  border-top-color: var(--moss);
+  border-radius: 50%;
+  animation: gira 0.8s linear infinite;
+}
+@keyframes gira { to { transform: rotate(360deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .rotella { animation-duration: 2.4s; }
+  .btn:active { transform: none; }
+}
+
+/* ---------- Leaflet ---------- */
+
+.leaflet-container { font-family: inherit; background: #DCE5DA; }
+.leaflet-control-layers, .leaflet-bar a {
+  border-radius: 8px !important;
+  color: var(--testo);
+}
+.leaflet-control-attribution { font-size: 9.5px; }
+
+.marcatore-posizione {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--dust);
+  border: 2px solid var(--chalk);
+  box-shadow: 0 0 0 3px rgba(200, 139, 60, 0.35);
+}
+
+/* Su schermi larghi il pannello diventa una colonna laterale. */
+@media (min-width: 900px) {
+  main { flex-direction: row-reverse; }
+  .pannello {
+    max-height: none;
+    width: 380px;
+    flex: 0 0 380px;
+    border-top: 0;
+    border-left: 1px solid var(--bordo);
+    box-shadow: -6px 0 18px rgba(27, 38, 32, 0.06);
+  }
+  .tab { grid-template-columns: repeat(4, minmax(0, 160px)); justify-content: center; }
+}

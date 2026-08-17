@@ -1,0 +1,20 @@
+{
+  "name": "SENTIERO — percorsi MTB",
+  "short_name": "SENTIERO",
+  "description": "Registra i tuoi giri in mountain bike, importa GPX e scopri i sentieri già mappati. I dati restano sul tuo dispositivo.",
+  "lang": "it",
+  "dir": "ltr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#EFEADF",
+  "theme_color": "#1B2620",
+  "categories": ["sports", "navigation", "travel"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="SENTIERO">
+  <title>SENTIERO</title>
+  <rect width="512" height="512" rx="113" fill="#1B2620"/>
+  <polygon points="266.2,409.6 378.9,235.5 491.5,409.6" fill="#527348"/>
+  <polygon points="30.7,409.6 204.8,153.6 378.9,409.6" fill="#3F5B37"/>
+  <polygon points="204.8,153.6 153.6,227.8 181.8,212.5 204.8,233.0 230.4,207.4 256.0,227.8" fill="#EFEADF"/>
+  <path d="M 81.9 460.8 L 153.6 419.8 L 133.1 368.6 L 204.8 332.8 L 184.3 286.7 L 245.8 256.0 L 225.3 215.0" fill="none" stroke="#C88B3C" stroke-width="23.0" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

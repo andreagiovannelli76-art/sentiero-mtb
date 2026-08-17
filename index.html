@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1B2620">
+<meta name="description" content="Percorsi in mountain bike: registra i tuoi giri, importa GPX, scopri i sentieri già mappati. Open source, i dati restano sul tuo telefono.">
+<title>SENTIERO — percorsi MTB</title>
+
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SENTIERO">
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="barra">
+  <div class="marchio">
+    <img src="icons/icon.svg" alt="" width="30" height="30">
+    <div>
+      <h1>SENTIERO</h1>
+      <p class="sottotitolo">Percorsi MTB · open source · v0.4 beta</p>
+    </div>
+  </div>
+  <button id="btn-report" class="icona" title="Segnala un problema su WhatsApp" aria-label="Segnala un problema">⚑</button>
+</header>
+
+<main>
+  <div id="mappa" role="application" aria-label="Mappa dei percorsi"></div>
+
+  <section id="pannello" class="pannello" hidden>
+
+    <!-- Percorsi salvati -->
+    <div class="vista" id="vista-percorsi" hidden>
+      <div class="vista-testa">
+        <h2>I tuoi percorsi</h2>
+        <div class="azioni-testa">
+          <button class="btn piccolo" id="btn-importa">Importa GPX</button>
+          <button class="btn piccolo fantasma" id="btn-demo">Percorso demo</button>
+        </div>
+      </div>
+      <input type="file" id="file-gpx" accept=".gpx,application/gpx+xml" multiple hidden>
+      <ul class="lista" id="lista-percorsi"></ul>
+      <p class="vuoto" id="lista-vuota" hidden>
+        Nessun percorso salvato. Registra un giro, importa un GPX o carica il percorso demo.
+      </p>
+    </div>
+
+    <!-- Registrazione -->
+    <div class="vista" id="vista-registra" hidden>
+      <div class="vista-testa"><h2>Registra un giro</h2></div>
+
+      <div class="dati-live">
+        <div class="dato"><span class="etichetta">Distanza</span><strong id="live-distanza">0 m</strong></div>
+        <div class="dato"><span class="etichetta">D+</span><strong id="live-dpiu">0 m</strong></div>
+        <div class="dato"><span class="etichetta">Durata</span><strong id="live-durata">0m 00s</strong></div>
+        <div class="dato"><span class="etichetta">Punti</span><strong id="live-punti">0</strong></div>
+      </div>
+
+      <div class="azioni">
+        <button class="btn primario" id="btn-avvia">Avvia</button>
+        <button class="btn" id="btn-pausa" hidden>Pausa</button>
+        <button class="btn pericolo" id="btn-ferma" hidden>Ferma e salva</button>
+      </div>
+
+      <p class="nota" id="nota-tracking">
+        Tieni l'app in primo piano: a schermo spento i browser sospendono il GPS.
+        È un limite del web, non un difetto dell'app.
+      </p>
+    </div>
+
+    <!-- Ricerca OSM -->
+    <div class="vista" id="vista-cerca" hidden>
+      <div class="vista-testa"><h2>Percorsi già mappati</h2></div>
+
+      <p class="nota">
+        Cerca le tracce MTB e le ciclabili censite su OpenStreetMap nella zona inquadrata dalla mappa.
+      </p>
+
+      <div class="riga-form">
+        <label for="raggio">Raggio</label>
+        <select id="raggio">
+          <option value="5000">5 km</option>
+          <option value="10000" selected>10 km</option>
+          <option value="20000">20 km</option>
+          <option value="40000">40 km</option>
+        </select>
+        <button class="btn primario" id="btn-cerca-qui">Cerca qui</button>
+        <button class="btn fantasma" id="btn-vicino">Vicino a me</button>
+      </div>
+
+      <ul class="lista" id="lista-osm"></ul>
+      <p class="vuoto" id="osm-vuota" hidden>Nessun percorso trovato in questa zona.</p>
+    </div>
+
+    <!-- Dettaglio -->
+    <div class="vista" id="vista-dettaglio" hidden>
+      <div class="vista-testa">
+        <button class="btn piccolo fantasma" id="btn-indietro">‹ Indietro</button>
+        <h2 id="dettaglio-nome">Percorso</h2>
+      </div>
+
+      <div class="statistiche" id="dettaglio-stat"></div>
+
+      <canvas id="profilo" class="profilo" height="130" aria-label="Profilo altimetrico"></canvas>
+
+      <div class="azioni azioni-dettaglio">
+        <button class="btn primario" id="btn-salva" hidden>Salva nella libreria</button>
+        <button class="btn" id="btn-quote">Correggi quote</button>
+        <button class="btn" id="btn-condividi">Condividi link</button>
+        <button class="btn" id="btn-esporta">Esporta GPX</button>
+        <button class="btn" id="btn-rinomina">Rinomina</button>
+        <button class="btn pericolo fantasma" id="btn-elimina">Elimina</button>
+      </div>
+    </div>
+
+  </section>
+</main>
+
+<nav class="tab" id="tab">
+  <button data-vista="mappa" class="attivo"><span class="segno">🗺</span>Mappa</button>
+  <button data-vista="percorsi"><span class="segno">📁</span>Percorsi</button>
+  <button data-vista="registra"><span class="segno">⏺</span>Registra</button>
+  <button data-vista="cerca"><span class="segno">🌐</span>Cerca</button>
+</nav>
+
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+<div id="velo" class="velo" hidden>
+  <div class="lavoro">
+    <div class="rotella" aria-hidden="true"></div>
+    <p id="velo-testo">Un attimo…</p>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/pako@2.1.0/dist/pako.min.js"></script>
+<script type="module" src="js/app.js"></script>
+<script defer src="/_vercel/insights/script.js"></script>
+</body>
+</html>
