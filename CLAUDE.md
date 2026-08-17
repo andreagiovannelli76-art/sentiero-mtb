@@ -59,7 +59,7 @@ vercel.json           no-cache su sw.js
 | Team | `andreagiovannelli76-arts-projects` |
 | Team ID | `team_4FD4UulZaV36wS7WrGcXt44F` |
 | URL produzione | `https://sentiero-andreagiovannelli76-arts-projects.vercel.app` |
-| Repo GitHub | `sentiero-mtb` (pubblico, MIT) — **TODO: inserire qui l'URL reale** |
+| Repo GitHub | `https://github.com/andreagiovannelli76-art/sentiero-mtb` (pubblico, MIT) |
 | Alias breve | **TODO: da assegnare** — `sentiero.vercel.app` è occupato da terzi |
 | Numero WhatsApp report | `393484791772` (costante `REPORT_WA` in `js/app.js`) — pubblico nel sorgente, Andrea ne è consapevole |
 
