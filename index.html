@@ -24,7 +24,7 @@
     <img src="icons/icon.svg" alt="" width="30" height="30">
     <div>
       <h1>SENTIERO</h1>
-      <p class="sottotitolo">Percorsi MTB · open source · v0.5.14 beta</p>
+      <p class="sottotitolo">Percorsi MTB · open source · v0.5.15 beta</p>
     </div>
   </div>
   <button id="btn-report" class="icona" title="Segnala un problema su WhatsApp" aria-label="Segnala un problema">⚑</button>
@@ -111,13 +111,14 @@
         <button class="btn fantasma" id="btn-vicino">Vicino a me</button>
       </div>
 
-      <ul class="lista" id="lista-osm"></ul>
-      <p class="vuoto" id="osm-vuota" hidden>Nessun percorso trovato in questa zona.</p>
       <details class="diagnostica" id="osm-diagnostica" hidden>
         <summary>Dettagli tecnici dell'ultimo tentativo</summary>
         <pre id="osm-registro"></pre>
         <p class="nota">Server contattati, esito e secondi di attesa. Serve a capire se il problema è del servizio o della tua connessione.</p>
       </details>
+
+      <ul class="lista" id="lista-osm"></ul>
+      <p class="vuoto" id="osm-vuota" hidden>Nessun percorso trovato in questa zona.</p>
     </div>
 
     <!-- Dettaglio -->

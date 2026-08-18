@@ -102,17 +102,17 @@ out tags;`;
   // formato — si scende su Overpass senza dire niente a nessuno: l'utente
   // vuole i percorsi, non sapere da quale porta sono entrati.
   try {
-    const veloci = await cercaSuWaymarked(
+    const { percorsi: veloci, riconosciuto } = await cercaSuWaymarked(
       lat - dLat, lon - dLon, lat + dLat, lon + dLon, opzioni
     );
-    if (veloci.length) {
+    // Anche un elenco vuoto è una risposta, purché la risposta l'abbiamo
+    // capita: "qui non c'è niente" non è un motivo per disturbare Overpass,
+    // né per mostrare un errore a chi ha solo cercato in una zona spoglia.
+    if (riconosciuto) {
       if (opzioni.onFonte) opzioni.onFonte("waymarked");
       await inCache(chiave, { fonte: "waymarked", percorsi: veloci });
       return veloci;
     }
-    // Elenco vuoto: può essere vero (qui non c'è niente) o può essere un
-    // formato che non abbiamo saputo leggere. Overpass toglie il dubbio, e
-    // costa una ricerca sola.
   } catch (e) {
     if (e.annullata) throw e;
     console.warn("Waymarked Trails non utilizzabile, passo a Overpass:", e.message);

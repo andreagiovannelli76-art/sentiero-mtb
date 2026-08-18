@@ -29,9 +29,17 @@ const SCADENZA = 12000;
 const QUANTI = 60;
 
 // Cerca nel riquadro (minLat, minLon, maxLat, maxLon).
-// Ritorna [{ id, idOsm, nome, tipo, rete, fonte, url }].
-// Lancia un errore se NESSUNA delle due fonti ha risposto: chi chiama deve
-// poter distinguere "qui non c'è niente" da "non ho potuto chiedere".
+// Ritorna { percorsi, riconosciuto }:
+//   percorsi     — [{ id, idOsm, nome, tipo, rete, fonte, url }]
+//   riconosciuto — la risposta aveva la forma che ci aspettiamo
+//
+// La distinzione conta. Un elenco vuoto da una risposta riconosciuta vuol
+// dire "qui non c'è niente", ed è una risposta: non serve andare a disturbare
+// Overpass, e soprattutto non si deve mostrare un errore a chi ha solo cercato
+// in una zona senza percorsi mappati. Un elenco vuoto da una risposta che non
+// abbiamo saputo leggere, invece, non vuol dire niente.
+//
+// Lancia un errore se NESSUNA delle due fonti ha risposto.
 export async function cercaPercorsi(minLat, minLon, maxLat, maxLon, opzioni = {}) {
   const riquadro = [minLon, minLat, maxLon, maxLat].map((n) => n.toFixed(5)).join(",");
 
@@ -43,7 +51,7 @@ export async function cercaPercorsi(minLat, minLon, maxLat, maxLon, opzioni = {}
         segnale: opzioni.segnale,
       }).then((esito) => {
         if (!esito.ok) throw new Error(`stato ${esito.stato}`);
-        return { tipo: f.tipo, voci: estrai(esito.dati) };
+        return { tipo: f.tipo, ...estrai(esito.dati) };
       })
     )
   );
@@ -74,13 +82,19 @@ export async function cercaPercorsi(minLat, minLon, maxLat, maxLon, opzioni = {}
     }
   }
 
-  return percorsi.sort((a, b) => a.nome.localeCompare(b.nome, "it"));
+  return {
+    percorsi: percorsi.sort((a, b) => a.nome.localeCompare(b.nome, "it")),
+    riconosciuto: riuscite.some((r) => r.riconosciuto),
+  };
 }
 
 // Il formato è documentato ma non è nostro: se un giorno cambia, si preferisce
 // restituire una lista vuota e lasciare che chi chiama passi a Overpass,
 // piuttosto che rompersi su una proprietà mancante.
 function estrai(dati) {
+  // "Riconosciuta" vuol dire che ci abbiamo trovato la lista dove ce
+  // l'aspettavamo, non che contenga qualcosa.
+  const riconosciuto = Array.isArray(dati) || Array.isArray(dati && dati.results);
   const grezzi = Array.isArray(dati) ? dati : (dati && dati.results) || [];
   const voci = [];
 
@@ -90,12 +104,21 @@ function estrai(dati) {
     if (!Number.isFinite(id) || id <= 0) continue;
 
     const nome = testo(r.name) || testo(r.ref) || `Percorso OSM ${id}`;
-    voci.push({ id, nome, rete: (testo(r.group) || "").toUpperCase() });
+    voci.push({ id, nome, rete: rete(r) });
   }
 
-  return voci;
+  return { voci, riconosciuto };
 }
 
 function testo(v) {
   return typeof v === "string" ? v.trim() : "";
+}
+
+// "lcn" e "rcn" sono sigle e vanno in maiuscolo. Ma qui arrivano anche nomi
+// per esteso — «Gli Anelli Ascolani» — e urlarli in maiuscolo li rende
+// illeggibili in una riga già stretta.
+function rete(r) {
+  const v = testo(r.group) || testo(r.network);
+  if (!v) return "";
+  return v.length <= 4 ? v.toUpperCase() : v;
 }
