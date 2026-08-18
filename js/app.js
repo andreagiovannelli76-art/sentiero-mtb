@@ -21,7 +21,7 @@ import { previsione, puntoPiuAlto } from "./weather.js";
 import { cercaPunti } from "./poi.js";
 import { mostraIntro, introGiaVista } from "./intro.js";
 
-export const APP_VERSION = "0.5.6-beta";
+export const APP_VERSION = "0.5.7-beta";
 
 // Numero del canale feedback beta. Pubblico nel sorgente: è una scelta consapevole.
 const REPORT_WA = "393484791772";
@@ -45,6 +45,14 @@ const stato = {
   ultimoAggiornamentoLive: 0,
   guida: null,
   quoteInCorso: null,
+  // Cresce a ogni percorso aperto. Le richieste lente lo catturano alla
+  // partenza e lo riconfrontano all'arrivo: se e' cambiato, l'utente sta
+  // guardando altro e quei dati non lo riguardano piu'.
+  //
+  // Non si confronta l'oggetto del percorso perche' quello viene sostituito
+  // quando arrivano le quote: chi era partito prima si sarebbe creduto
+  // scaduto pur essendo ancora la scheda giusta.
+  apertura: 0,
 };
 
 let mappa;
@@ -260,6 +268,7 @@ function dataBreve(iso) {
 // ---------------------------------------------------------------- dettaglio
 
 function apriPercorso(percorso, salvato) {
+  stato.apertura++;
   stato.attivo = percorso;
   stato.attivoSalvato = !!salvato;
 
@@ -498,9 +507,11 @@ async function mostraMeteo(percorso) {
   el("meteo").hidden = true;
   if (!cima) return;
 
+  const apertura = stato.apertura;
+
   try {
     const giorni = await previsione(cima.lat, cima.lon);
-    if (stato.attivo !== percorso) return;
+    if (stato.apertura !== apertura) return;
 
     el("meteo-quota").textContent = `· ${Math.round(cima.ele)} m`;
     el("meteo-giorni").innerHTML = giorni
@@ -527,11 +538,12 @@ async function mostraMeteo(percorso) {
 async function mostraAppoggi() {
   if (!stato.attivo) return;
   const percorso = stato.attivo;
+  const apertura = stato.apertura;
 
   lavoro(true, "Cerco fontane e ricoveri…");
   try {
     const punti = await cercaPunti(percorso.punti);
-    if (stato.attivo !== percorso) return;
+    if (stato.apertura !== apertura) return;
 
     const ul = el("lista-appoggi");
     ul.innerHTML = "";
@@ -577,6 +589,7 @@ async function chiediQuote(percorso, forzato = false) {
   if (stato.quoteInCorso === percorso) return;
   stato.quoteInCorso = percorso;
 
+  const apertura = stato.apertura;
   profilo.imposta(percorso.punti, "Carico le quote…");
 
   try {
@@ -584,7 +597,7 @@ async function chiediQuote(percorso, forzato = false) {
 
     // Nel frattempo l'utente puo' aver aperto un altro percorso: in quel caso
     // questi dati non c'entrano piu' niente con quello che sta guardando.
-    if (stato.attivo !== percorso) return;
+    if (stato.apertura !== apertura) return;
 
     stato.attivo = { ...stato.attivo, punti, quoteCorrette: true };
     if (stato.attivoSalvato) {
@@ -597,7 +610,7 @@ async function chiediQuote(percorso, forzato = false) {
     mostraMeteo(stato.attivo);
     avvisa("Quote aggiunte dal modello del terreno.");
   } catch (e) {
-    if (stato.attivo !== percorso) return;
+    if (stato.apertura !== apertura) return;
     profilo.imposta(percorso.punti, "Quote non disponibili — riprova con «Correggi quote»");
     // All'apertura si resta discreti: il percorso e' comunque utilizzabile,
     // e un avviso rosso non richiesto sarebbe solo fastidio. Se invece il
