@@ -21,7 +21,7 @@ import { previsione, puntoPiuAlto } from "./weather.js";
 import { cercaPunti } from "./poi.js";
 import { mostraIntro, introGiaVista } from "./intro.js";
 
-export const APP_VERSION = "0.5.9-beta";
+export const APP_VERSION = "0.5.10-beta";
 
 // Numero del canale feedback beta. Pubblico nel sorgente: è una scelta consapevole.
 const REPORT_WA = "393484791772";

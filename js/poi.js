@@ -11,6 +11,7 @@ import { chiediJson } from "./rete.js";
 const ENDPOINT = [
   "https://overpass-api.de/api/interpreter",
   "https://overpass.kumi.systems/api/interpreter",
+  "https://overpass.private.coffee/api/interpreter",
 ];
 
 // Quanto lontano dalla traccia si accetta un punto: oltre, è una deviazione

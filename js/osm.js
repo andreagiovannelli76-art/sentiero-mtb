@@ -4,11 +4,25 @@
 import { haversine, lunghezza } from "./geo.js";
 import { chiediJson } from "./rete.js";
 
-// Più mirror: se il primo è sovraccarico si passa al successivo.
+// Overpass è un servizio pubblico e gratuito, tenuto in piedi da volontari:
+// nelle ore di punta una richiesta può restare in coda per un minuto. Non è
+// rotto, è affollato — e sono mirror indipendenti, quindi quando uno arranca
+// spesso un altro è libero.
 const ENDPOINT = [
   "https://overpass-api.de/api/interpreter",
   "https://overpass.kumi.systems/api/interpreter",
+  "https://overpass.private.coffee/api/interpreter",
 ];
+
+// Dopo quanto si affianca il mirror successivo. Non si aspetta che il primo
+// fallisca — aspettare tre volte trenta secondi vuol dire un minuto e mezzo
+// davanti a una rotella — ma nemmeno si parte a raffica su tutti: si dà al
+// primo un vantaggio di cinque secondi, che gli basta quando è in salute.
+// Vince chi risponde per primo, gli altri vengono fermati subito dopo.
+const ANTICIPO = 5000;
+
+// Quanto si concede a un singolo mirror prima di considerarlo perso.
+const SCADENZA_OVERPASS = 30000;
 
 // Tolleranza in metri per considerare due estremi di way come lo stesso punto.
 const TOLLERANZA_GIUNZIONE = 30;
@@ -199,9 +213,7 @@ function attesa(ms, segnale) {
     function interrompi() {
       clearTimeout(timer);
       if (segnale) segnale.removeEventListener("abort", interrompi);
-      const e = new Error("Annullato.");
-      e.annullata = true;
-      rifiuta(e);
+      rifiuta(annullata());
     }
     if (segnale) {
       if (segnale.aborted) return interrompi();
@@ -212,71 +224,85 @@ function attesa(ms, segnale) {
 
 async function interroga(query, opzioni = {}) {
   const { segnale = null, onStato = () => {} } = opzioni;
-  let ultimoErrore = null;
-  let ultimoStato = 0;
-  let scaduta = false;
 
-  for (let m = 0; m < ENDPOINT.length; m++) {
-    const url = ENDPOINT[m];
-    if (m > 0) onStato("Il primo server non risponde: ne provo un altro…");
-
-    // Il 429 di Overpass è quasi sempre una coda momentanea: vale un secondo
-    // tentativo sullo stesso mirror prima di passare al successivo.
-    for (let tentativo = 0; tentativo < 2; tentativo++) {
-      try {
-        const esito = await chiediJson(url, {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: `data=${encodeURIComponent(query)}`,
-          segnale,
-        });
-
-        if (esito.ok) return esito.dati;
-
-        ultimoStato = esito.stato;
-
-        if (esito.stato === 429) {
-          if (tentativo === 0) {
-            onStato("Overpass è in coda: aspetto due secondi…");
-            await attesa(2000, segnale);
-            continue;
-          }
-          break;
-        }
-
-        // 504: la query non è finita in tempo. Riprovarla identica sullo stesso
-        // mirror non serve a niente, si passa al prossimo.
-        break;
-      } catch (e) {
-        // Annullata da chi ha chiesto: non si prova nient'altro.
-        if (e.annullata) throw e;
-        if (e.scaduta) scaduta = true;
-        ultimoErrore = e;
-        break;
-      }
-    }
+  // Una corsa fra i mirror: il primo che taglia il traguardo ferma gli altri.
+  const corsa = new AbortController();
+  const inoltra = () => corsa.abort();
+  if (segnale) {
+    if (segnale.aborted) throw annullata();
+    segnale.addEventListener("abort", inoltra);
   }
 
-  if (ultimoStato === 429) {
-    throw new Error(
+  const richiesta = {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: `data=${encodeURIComponent(query)}`,
+    segnale: corsa.signal,
+    scadenza: SCADENZA_OVERPASS,
+  };
+
+  const stati = [];
+  let inGara = 0;
+
+  const tentativo = async (url, ritardo) => {
+    // L'attesa si interrompe se qualcuno ha già vinto: nessuna richiesta
+    // inutile a un servizio gratuito.
+    if (ritardo) await attesa(ritardo, corsa.signal);
+
+    inGara++;
+    if (inGara === 2) onStato("Il primo server è lento: ne interrogo un altro in parallelo…");
+
+    const esito = await chiediJson(url, richiesta);
+    if (!esito.ok) {
+      stati.push(esito.stato);
+      throw new Error(`stato ${esito.stato}`);
+    }
+    return esito.dati;
+  };
+
+  try {
+    return await Promise.any(ENDPOINT.map((url, i) => tentativo(url, i * ANTICIPO)));
+  } catch (e) {
+    // Se l'utente ha premuto Annulla, è quello che va detto: gli altri
+    // fallimenti sono conseguenza, non causa.
+    if (segnale && segnale.aborted) throw annullata();
+
+    const errori = (e && e.errors) || [e];
+    throw spiegaFallimento(stati, errori);
+  } finally {
+    if (segnale) segnale.removeEventListener("abort", inoltra);
+    // Vinta o persa, la corsa è finita: chi è ancora in volo può fermarsi.
+    corsa.abort();
+  }
+}
+
+function annullata() {
+  const e = new Error("Annullato.");
+  e.annullata = true;
+  return e;
+}
+
+// Un messaggio che dice cosa è successo e cosa si può fare, non un codice.
+function spiegaFallimento(stati, errori) {
+  if (stati.includes(429)) {
+    return new Error(
       "Overpass sta rifiutando le richieste: è un servizio pubblico e condiviso. Riprova fra un minuto."
     );
   }
-  if (ultimoStato === 504) {
-    throw new Error(
+  if (stati.includes(504)) {
+    return new Error(
       "Overpass non ha finito in tempo: la zona è troppo ampia. Riprova con un raggio più piccolo."
     );
   }
-  if (ultimoStato) {
-    throw new Error(`Overpass ha risposto ${ultimoStato}.`);
-  }
-  if (scaduta) {
-    throw new Error(
-      "OpenStreetMap non ha risposto in tempo. Controlla il campo e riprova: con poca rete conviene un raggio più piccolo."
+  if (errori.some((x) => x && x.scaduta)) {
+    return new Error(
+      "OpenStreetMap non ha risposto in tempo: in questo momento è molto carico. Riprova fra un minuto, o con un raggio più piccolo."
     );
   }
-
-  throw ultimoErrore || new Error("Overpass non raggiungibile.");
+  if (stati.length) {
+    return new Error(`Overpass ha risposto ${stati[0]}.`);
+  }
+  return new Error("Overpass non raggiungibile: controlla la connessione.");
 }
 
 // Unisce le way di una relazione in un'unica polilinea.
