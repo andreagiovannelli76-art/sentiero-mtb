@@ -20,9 +20,16 @@ import { chiediJson } from "./rete.js";
 // Due discipline, due database. L'MTB ha i percorsi tecnici, il ciclismo le
 // ciclabili segnate: sono elenchi diversi e li vogliamo entrambi, come già
 // facevamo con le due query a Overpass.
+// L'ordine conta: un percorso presente in piu' elenchi tiene la prima
+// classificazione, quindi la piu' specifica va per prima.
 const FONTI = [
   { url: "https://mtb.waymarkedtrails.org/api/v1/list/by_area", tipo: "MTB" },
   { url: "https://cycling.waymarkedtrails.org/api/v1/list/by_area", tipo: "Ciclabile" },
+  // I sentieri numerati che si vedono in viola sulla mappa — il 7, l'8, la
+  // rete CAI — sono censiti come percorsi escursionistici, non ciclabili.
+  // Ma sono esattamente dove si pedala in MTB sull'Appennino: escluderli
+  // vuol dire rispondere "qui non c'e' niente" davanti a un sentiero segnato.
+  { url: "https://hiking.waymarkedtrails.org/api/v1/list/by_area", tipo: "Sentiero" },
 ];
 
 const SCADENZA = 12000;

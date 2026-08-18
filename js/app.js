@@ -22,7 +22,7 @@ import { cercaPunti } from "./poi.js";
 import { testo as registroRete } from "./registro.js";
 import { mostraIntro, introGiaVista } from "./intro.js";
 
-export const APP_VERSION = "0.5.19-beta";
+export const APP_VERSION = "0.5.20-beta";
 
 // Numero del canale feedback beta. Pubblico nel sorgente: è una scelta consapevole.
 const REPORT_WA = "393484791772";
