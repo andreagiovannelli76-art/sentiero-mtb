@@ -24,7 +24,7 @@
     <img src="icons/icon.svg" alt="" width="30" height="30">
     <div>
       <h1>SENTIERO</h1>
-      <p class="sottotitolo">Percorsi MTB · open source · v0.5.5 beta</p>
+      <p class="sottotitolo">Percorsi MTB · open source · v0.5.6 beta</p>
     </div>
   </div>
   <button id="btn-report" class="icona" title="Segnala un problema su WhatsApp" aria-label="Segnala un problema">⚑</button>
@@ -57,6 +57,7 @@
       <ul class="lista" id="lista-percorsi"></ul>
       <p class="vuoto" id="lista-vuota" hidden>
         Nessun percorso salvato. Registra un giro, importa un GPX o carica il percorso demo.
+        <br><button class="btn piccolo fantasma" id="btn-guida">Come funziona</button>
       </p>
     </div>
 
@@ -159,6 +160,17 @@
 </nav>
 
 <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+<div id="intro" class="intro" hidden role="dialog" aria-modal="true" aria-label="Come funziona SENTIERO">
+  <div class="intro-carta">
+    <div id="intro-passi" class="intro-passi"></div>
+    <div class="intro-piede">
+      <div class="intro-punti" id="intro-punti"></div>
+      <button class="btn fantasma piccolo" id="intro-salta">Salta</button>
+      <button class="btn primario" id="intro-avanti">Avanti</button>
+    </div>
+  </div>
+</div>
 
 <div id="velo" class="velo" hidden>
   <div class="lavoro">

@@ -3,7 +3,7 @@
 // ATTENZIONE alla procedura di release: a ogni pubblicazione va incrementato N in
 // "sentiero-vN", altrimenti i dispositivi continuano a servire la versione vecchia.
 
-const V = "sentiero-v11";
+const V = "sentiero-v12";
 
 const SHELL = [
   "./",
@@ -22,6 +22,7 @@ const SHELL = [
   "./js/geocode.js",
   "./js/weather.js",
   "./js/poi.js",
+  "./js/intro.js",
   "./manifest.webmanifest",
   // Icone e percorso demo: senza questi, al primo avvio offline mancano
   // l'icona della PWA e l'unico percorso con cui provare l'app.

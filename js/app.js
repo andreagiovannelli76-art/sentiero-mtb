@@ -19,8 +19,9 @@ import { cercaPercorsi } from "./osm.js";
 import { cercaLuogo } from "./geocode.js";
 import { previsione, puntoPiuAlto } from "./weather.js";
 import { cercaPunti } from "./poi.js";
+import { mostraIntro, introGiaVista } from "./intro.js";
 
-export const APP_VERSION = "0.5.5-beta";
+export const APP_VERSION = "0.5.6-beta";
 
 // Numero del canale feedback beta. Pubblico nel sorgente: è una scelta consapevole.
 const REPORT_WA = "393484791772";
@@ -76,8 +77,14 @@ async function avvia() {
 
   // Un link condiviso ha la precedenza su tutto: è il primo contatto di chi apre.
   const condiviso = leggiLink();
-  if (condiviso) apriCondiviso(condiviso);
-  else mostraVista("mappa");
+  if (condiviso) {
+    apriCondiviso(condiviso);
+  } else {
+    mostraVista("mappa");
+    // Chi arriva da un link sta guardando il percorso di un amico: la guida
+    // gliela si mostra un'altra volta, non davanti a quello che è venuto a vedere.
+    if (!introGiaVista()) mostraIntro();
+  }
 }
 
 function apriCondiviso(condiviso) {
@@ -872,6 +879,7 @@ function collegaEventi() {
   }
 
   el("btn-report").addEventListener("click", apriReport);
+  el("btn-guida").addEventListener("click", mostraIntro);
   el("btn-indietro").addEventListener("click", () => mostraVista(stato.vistaPrecedente));
 
   el("btn-importa").addEventListener("click", () => el("file-gpx").click());

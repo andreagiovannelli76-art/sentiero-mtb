@@ -419,6 +419,58 @@ main {
 .tab button.attivo .segno { filter: drop-shadow(0 0 6px rgba(200, 139, 60, 0.5)); }
 .tab button.registrando { color: var(--dust); }
 
+/* ---------- guida del primo avvio ---------- */
+
+.intro {
+  position: fixed;
+  inset: 0;
+  background: rgba(27, 38, 32, 0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 5000;
+}
+
+.intro-carta {
+  background: var(--carta);
+  border-radius: 14px;
+  padding: 22px 20px 16px;
+  width: min(440px, 100%);
+  max-height: 86vh;
+  max-height: 86dvh;
+  overflow-y: auto;
+  box-shadow: 0 12px 40px rgba(27, 38, 32, 0.4);
+}
+
+.intro-passi h2 {
+  margin: 0 0 12px;
+  font-size: 19px;
+  font-weight: 650;
+  line-height: 1.25;
+}
+.intro-passi p {
+  margin: 0 0 12px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--testo);
+}
+
+.intro-piede {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+}
+.intro-punti { flex: 1 1 auto; display: flex; gap: 6px; }
+.punto {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--bordo);
+}
+.punto.attivo { background: var(--moss); }
+
 /* ---------- avvisi e attesa ---------- */
 
 .toast {

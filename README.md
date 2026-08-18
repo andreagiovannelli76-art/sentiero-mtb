@@ -8,7 +8,7 @@ telefono o sul computer che stai usando. È una scelta di prodotto, non una funz
 
 Open source, licenza MIT. Di Andrea Giovannelli, Ascoli Piceno.
 
-Versione: **0.5.5 beta**.
+Versione: **0.5.6 beta**.
 
 ---
 
@@ -57,6 +57,7 @@ js/follow.js          guida lungo un percorso: scarto dalla traccia, quanto manc
 js/geocode.js         Nominatim: trovare un posto per nome
 js/weather.js         Open-Meteo: previsioni sul punto più alto del percorso
 js/poi.js             Overpass: acqua e ricoveri lungo la traccia
+js/intro.js           le tre schermate del primo avvio
 sw.js                 service worker (cache del guscio)
 manifest.webmanifest  PWA
 icons/                icon-192, icon-512, icon.svg (sorgente delle altre due)
