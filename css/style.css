@@ -587,3 +587,13 @@ main {
   color: var(--testo);
 }
 .diagnostica .nota { margin-top: 8px; }
+
+/* Le due cose che si fanno davvero con un percorso — andarci e seguirlo —
+   stanno in cima, dove le vedi appena apri. In fondo, dopo mappa, profilo e
+   meteo, un pulsante su un telefono e' un pulsante che non esiste. */
+.azioni-principali {
+  margin: 0 0 14px;
+}
+.azioni-principali .btn {
+  flex: 1 1 45%;
+}
