@@ -8,7 +8,7 @@ telefono o sul computer che stai usando. È una scelta di prodotto, non una funz
 
 Open source, licenza MIT. Di Andrea Giovannelli, Ascoli Piceno.
 
-Versione: **0.5.18 beta**.
+Versione: **0.5.19 beta**.
 
 ---
 

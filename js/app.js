@@ -22,7 +22,7 @@ import { cercaPunti } from "./poi.js";
 import { testo as registroRete } from "./registro.js";
 import { mostraIntro, introGiaVista } from "./intro.js";
 
-export const APP_VERSION = "0.5.18-beta";
+export const APP_VERSION = "0.5.19-beta";
 
 // Numero del canale feedback beta. Pubblico nel sorgente: è una scelta consapevole.
 const REPORT_WA = "393484791772";
@@ -496,7 +496,12 @@ async function cerca(lat, lon) {
       onFonte: (f) => { fonte = f; },
     });
     mostraRisultatiOsm(risultati);
-    if (!risultati.length) return;
+    if (!risultati.length) {
+      // "Non c'è niente" è una conclusione: si mostra da chi arriva, così
+      // non resta il dubbio che sia stato qualcuno a non rispondere.
+      mostraDiagnostica();
+      return;
+    }
 
     const quanti = risultati.length === 1 ? "1 percorso trovato" : `${risultati.length} percorsi trovati`;
     // Se la risposta arriva dalla memoria va detto: altrimenti un elenco

@@ -149,6 +149,7 @@ Principio: **prima i percorsi esistenti (OSM), poi la community, poi il premium.
 | 0.5.16 ✅ | «Portami all'inizio» e «Segnala un problema» funzionano anche con l'app installata da icona, dove window.open non apriva niente | rilasciata |
 | 0.5.17 ✅ | «Segui» e «Portami all'inizio» in cima alla scheda, visibili senza scorrere | rilasciata |
 | 0.5.18 ✅ | Toccare la mappa apre il percorso che passa lì: uno si apre, più d'uno si sceglie | rilasciata |
+| 0.5.19 ✅ | Un «non c'è niente» va confermato dalla seconda fonte prima di annunciarlo | rilasciata |
 | 0.6 | Backend Supabase: auth, libreria pubblica condivisa, "rendi pubblico" un giro, foto, autore, like/commenti | trasforma il tool in community |
 | 0.7 | Schede guida: descrizione tecnica, stagionalità · punti pericolosi | i POI acqua/rifugi sono già arrivati in 0.5.5 |
 | 0.8 | Guide premium: flag `premium`, Stripe, accesso a pagamento · tile offline per zona | monetizzazione |

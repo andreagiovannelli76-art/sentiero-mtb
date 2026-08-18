@@ -101,27 +101,52 @@ out tags;`;
   // Se non risponde — è giù, non parla con noi dal browser, ha cambiato
   // formato — si scende su Overpass senza dire niente a nessuno: l'utente
   // vuole i percorsi, non sapere da quale porta sono entrati.
+  // Vero se Waymarked Trails ha risposto in modo comprensibile: cambia cosa
+  // fare se poi Overpass non risponde.
+  let waymarkedHaParlato = false;
+
   try {
     const { percorsi: veloci, riconosciuto } = await cercaSuWaymarked(
       lat - dLat, lon - dLon, lat + dLat, lon + dLon, opzioni
     );
-    // Anche un elenco vuoto è una risposta, purché la risposta l'abbiamo
-    // capita: "qui non c'è niente" non è un motivo per disturbare Overpass,
-    // né per mostrare un errore a chi ha solo cercato in una zona spoglia.
-    if (riconosciuto) {
+
+    if (riconosciuto && veloci.length) {
       if (opzioni.onFonte) opzioni.onFonte("waymarked");
       await inCache(chiave, { fonte: "waymarked", percorsi: veloci });
       return veloci;
     }
+
+    // Elenco vuoto. Può voler dire davvero "qui non c'è niente" — sulle
+    // colline picene capita spesso — oppure che la loro copertura non arriva
+    // fin qui, o che il riquadro non gli è piaciuto. Dire a qualcuno "non
+    // c'è niente" quando invece c'è è il modo più sicuro di fargli chiudere
+    // l'app, quindi il vuoto si fa confermare da Overpass prima di
+    // annunciarlo. Costa una domanda in più solo nei casi vuoti, che sono i
+    // meno frequenti e i più dubbi.
+    waymarkedHaParlato = riconosciuto;
   } catch (e) {
     if (e.annullata) throw e;
     console.warn("Waymarked Trails non utilizzabile, passo a Overpass:", e.message);
   }
 
   if (opzioni.onFonte) opzioni.onFonte("rete");
-  const dati = await interroga(query, opzioni);
-  await inCache(chiave, dati);
 
+  let dati;
+  try {
+    dati = await interroga(query, opzioni);
+  } catch (e) {
+    if (e.annullata) throw e;
+    // Se l'altra fonte aveva risposto, un vuoto confermato a meta' resta una
+    // risposta: meglio "non c'è niente" che un errore rosso su una zona in
+    // cui, molto probabilmente, davvero non c'è niente.
+    if (waymarkedHaParlato) {
+      if (opzioni.onFonte) opzioni.onFonte("waymarked");
+      return [];
+    }
+    throw e;
+  }
+
+  await inCache(chiave, dati);
   return daOverpass(dati);
 }
 
