@@ -8,7 +8,7 @@ telefono o sul computer che stai usando. È una scelta di prodotto, non una funz
 
 Open source, licenza MIT. Di Andrea Giovannelli, Ascoli Piceno.
 
-Versione: **0.5.2 beta**.
+Versione: **0.5.3 beta**.
 
 ---
 
@@ -19,7 +19,7 @@ Versione: **0.5.2 beta**.
 - **Importa ed esporta GPX** (Garmin, Komoot, Strava e chiunque altro)
 - **Statistiche**: distanza, D+ / D−, quota massima, pendenza massima, difficoltà, durata
 - **Profilo altimetrico** sincronizzato con la mappa: passi il dito sul profilo, il punto si accende sulla mappa
-- **Correzione delle quote** via Open-Elevation, per quando il GPS del telefono sbaglia il dislivello
+- **Quote automatiche**: un percorso senza altitudini le chiede da solo all'apertura, da tre fonti gratuite in cascata (Open-Meteo, OpenTopoData, Open-Elevation)
 - **Percorsi già mappati**: cerca su OpenStreetMap le tracce `route=mtb` e le ciclabili locali e regionali
 - **Condivisione senza server**: il link contiene la traccia compressa nel frammento dell'URL
 - **Quattro sfondi mappa** (OpenTopoMap, OSM, satellite Esri, CyclOSM) e l'overlay Waymarked Trails MTB
@@ -84,8 +84,8 @@ Sono vincoli consapevoli, non bug da segnalare:
 
 - **Niente tracciamento a schermo spento.** I browser sospendono il GPS quando lo schermo si
   spegne. Il wake lock è già attivo. Si risolve solo con un wrapper nativo.
-- **Open-Elevation è un servizio pubblico e rate-limited.** Su tracce lunghe o a raffica può
-  rifiutare le richieste.
+- **Le fonti di quote sono servizi pubblici e gratuiti.** Sono tre in cascata, ma se
+  sono giù tutte insieme le quote non arrivano: si riprova più tardi.
 - **La copertura OSM è disomogenea.** Sibillini e ciclovie sono mappati bene, le colline picene
   molto meno. È il motivo per cui serve una community, non un difetto del codice.
 - **Il link condivisibile contiene la traccia semplificata.** Oltre gli 8000 caratteri l'app

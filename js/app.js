@@ -17,7 +17,7 @@ import { creaLink, leggiLink, LIMITE_URL } from "./share.js";
 import { correggiQuote } from "./elevation.js";
 import { cercaPercorsi } from "./osm.js";
 
-export const APP_VERSION = "0.5.2-beta";
+export const APP_VERSION = "0.5.3-beta";
 
 // Numero del canale feedback beta. Pubblico nel sorgente: è una scelta consapevole.
 const REPORT_WA = "393484791772";
@@ -40,6 +40,7 @@ const stato = {
   risultatiOsm: [],
   ultimoAggiornamentoLive: 0,
   guida: null,
+  quoteInCorso: null,
 };
 
 let mappa;
@@ -261,11 +262,10 @@ function apriPercorso(percorso, salvato) {
   profilo.imposta(percorso.punti);
   mostraVista("dettaglio");
 
-  // I percorsi presi da OSM arrivano senza quote: senza dirlo, l'utente vede
-  // solo trattini e non ha modo di sapere che si rimedia con un pulsante.
-  if (!s.haQuote) {
-    avvisa("Percorso senza quote: premi «Correggi quote» per dislivello e profilo.");
-  }
+  // I percorsi presi da OSM arrivano senza quote. Chiederle e' l'unico modo
+  // per avere dislivello e profilo, quindi si fa da soli invece di aspettare
+  // che l'utente scopra il pulsante giusto.
+  if (!s.haQuote) chiediQuote(percorso);
 }
 
 function rinfrescaStatistiche() {
@@ -430,6 +430,44 @@ async function cerca(lat, lon) {
   }
 }
 
+// ---------------------------------------------------------------- quote
+
+// Chiede le quote e aggiorna la scheda quando arrivano. Non blocca niente:
+// mappa e distanza si vedono subito, dislivello e profilo si riempiono dopo.
+async function chiediQuote(percorso, forzato = false) {
+  if (stato.quoteInCorso === percorso) return;
+  stato.quoteInCorso = percorso;
+
+  profilo.imposta(percorso.punti, "Carico le quote…");
+
+  try {
+    const punti = await correggiQuote(percorso.punti);
+
+    // Nel frattempo l'utente puo' aver aperto un altro percorso: in quel caso
+    // questi dati non c'entrano piu' niente con quello che sta guardando.
+    if (stato.attivo !== percorso) return;
+
+    stato.attivo = { ...stato.attivo, punti, quoteCorrette: true };
+    if (stato.attivoSalvato) {
+      await db.salva(stato.attivo);
+      await ricaricaLista();
+    }
+
+    rinfrescaStatistiche();
+    profilo.imposta(stato.attivo.punti);
+    avvisa("Quote aggiunte dal modello del terreno.");
+  } catch (e) {
+    if (stato.attivo !== percorso) return;
+    profilo.imposta(percorso.punti, "Quote non disponibili — riprova con «Correggi quote»");
+    // All'apertura si resta discreti: il percorso e' comunque utilizzabile,
+    // e un avviso rosso non richiesto sarebbe solo fastidio. Se invece il
+    // pulsante l'hai premuto tu, meriti di sapere com'e' andata.
+    if (forzato) avvisa(e.message, true);
+  } finally {
+    if (stato.quoteInCorso === percorso) stato.quoteInCorso = null;
+  }
+}
+
 // ---------------------------------------------------------------- guida
 
 async function avviaGuida() {
@@ -533,27 +571,7 @@ async function salvaAttivo() {
 
 async function correggiQuoteAttivo() {
   if (!stato.attivo) return;
-  lavoro(true, "Chiedo le quote a Open-Elevation…");
-
-  try {
-    const puntiCorretti = await correggiQuote(stato.attivo.punti, (fatti, totali) => {
-      el("velo-testo").textContent = `Quote corrette: ${fatti}/${totali} blocchi…`;
-    });
-
-    stato.attivo = { ...stato.attivo, punti: puntiCorretti, quoteCorrette: true };
-    if (stato.attivoSalvato) {
-      await db.salva(stato.attivo);
-      await ricaricaLista();
-    }
-
-    rinfrescaStatistiche();
-    profilo.imposta(stato.attivo.punti);
-    avvisa("Quote corrette. Il dislivello ora è calcolato sul modello del terreno.");
-  } catch (e) {
-    avvisa(e.message || "Correzione quote non riuscita.", true);
-  } finally {
-    lavoro(false);
-  }
+  await chiediQuote(stato.attivo, true);
 }
 
 async function condividiAttivo() {

@@ -24,7 +24,9 @@ Obiettivo di business a medio termine: community di percorsi + guide a pagamento
 - HTML/CSS/JS vanilla, ES modules
 - Leaflet 1.9.4 e pako 2.1.0 via unpkg (CDN, non in locale)
 - Layer mappa: OpenTopoMap (default), OSM, Esri satellite, CyclOSM · Overlay: Waymarked Trails MTB
-- Dati esterni: Overpass API (percorsi OSM), Open-Elevation (correzione quote)
+- Dati esterni: Overpass API (percorsi OSM) · quote da tre fonti gratuite in cascata:
+  Open-Meteo (Copernicus 90 m, la più stabile), OpenTopoData (EU-DEM 25 m, la più precisa
+  sull'Appennino ma 1 chiamata/s e 1000/giorno), Open-Elevation (ultima rete)
 - Hosting: Vercel, sito statico · Analytics: `/_vercel/insights/script.js` già in `index.html`
 - Palette: pine `#1B2620` · moss `#3F5B37` · dust `#C88B3C` · chalk `#EFEADF`
 
@@ -105,7 +107,7 @@ npx vercel --prod
 ## Limiti noti — NON toccare
 
 - **Niente tracciamento a schermo spento.** Limite dei browser, non un bug. Il wake lock è già attivo. Si risolve solo con il wrapper Capacitor (v1.0).
-- **Open-Elevation è pubblico e rate-limited.** Per precisione servirà un DEM server-side (Supabase Edge + SRTM/Copernicus), previsto più avanti.
+- **Le quote vengono da servizi pubblici e gratuiti.** Dalla v0.5.3 sono tre in cascata, il che rende raro restare senza; ma restano fuori dal nostro controllo. Un DEM server-side (Supabase Edge + SRTM/Copernicus) resta previsto più avanti.
 - **Copertura OSM disomogenea:** Sibillini e ciclovie ottime, colline picene scarse. È il motivo per cui serve la community, non un difetto da correggere nel codice.
 - **Il link condivisibile contiene la traccia semplificata.** Oltre ~8000 caratteri l'app rimanda al GPX: è il comportamento voluto.
 

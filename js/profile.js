@@ -39,7 +39,8 @@ export class Profilo {
     window.removeEventListener("resize", this._ridimensiona);
   }
 
-  imposta(punti) {
+  imposta(punti, testoVuoto = "Nessuna quota — premi «Correggi quote»") {
+    this.testoVuoto = testoVuoto;
     this.punti = (punti || []).filter((p) => typeof p.ele === "number" && isFinite(p.ele));
     this.completo = punti || [];
     this.dist = this.punti.length ? progressive(this.punti) : [];
@@ -71,7 +72,7 @@ export class Profilo {
       ctx.fillStyle = COLORE_TESTO;
       ctx.font = "13px system-ui, sans-serif";
       ctx.textAlign = "center";
-      ctx.fillText("Nessuna quota — premi «Correggi quote»", larghezza / 2, altezza / 2);
+      ctx.fillText(this.testoVuoto || "Nessuna quota", larghezza / 2, altezza / 2);
       ctx.textAlign = "start";
       return;
     }
