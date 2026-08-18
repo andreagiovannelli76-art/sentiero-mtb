@@ -2,6 +2,7 @@
 // Si cercano le relazioni route=mtb e le ciclabili locali/regionali (route=bicycle, network lcn/rcn).
 
 import { haversine, lunghezza } from "./geo.js";
+import { chiediJson } from "./rete.js";
 
 // Più mirror: se il primo è sovraccarico si passa al successivo.
 const ENDPOINT = [
@@ -12,9 +13,23 @@ const ENDPOINT = [
 // Tolleranza in metri per considerare due estremi di way come lo stesso punto.
 const TOLLERANZA_GIUNZIONE = 30;
 
+// La ricerca avviene in due tempi, ed è la ragione per cui l'elenco compare
+// subito invece che dopo mezzo minuto.
+//
+// Primo tempo (questa funzione): si chiedono solo i tag e il rettangolo di
+// ingombro delle relazioni. Sono pochi kilobyte, arrivano in un istante, e
+// bastano per scrivere l'elenco: nome, tipo, rete, quanto è lontano da te.
+//
+// Secondo tempo (`caricaTraccia`): la geometria, che è il novanta per cento
+// del peso, si chiede solo per il percorso che si tocca. Prima si scaricava
+// la traccia completa di tutti i risultati per mostrarne una riga a testa —
+// e una relazione lunga arriva intera anche se la sfiori con il riquadro.
+
 // Cerca percorsi entro `raggio` metri da (lat, lon).
-// Ritorna un array di { id, nome, tipo, rete, punti, distanza, frammentato }.
-export async function cercaPercorsi(lat, lon, raggio = 8000) {
+// `opzioni.segnale` è un AbortSignal per annullare, `opzioni.onStato(testo)`
+// riceve i cambi di passo (il secondo mirror, un'attesa) da mostrare a schermo.
+// Ritorna un array di { id, idOsm, nome, tipo, rete, distanzaDaTe }.
+export async function cercaPercorsi(lat, lon, raggio = 8000, opzioni = {}) {
   // Riquadro invece di (around:): Overpass indicizza i riquadri, mentre around
   // deve calcolare la distanza relazione per relazione ed è molto più pesante.
   // Su un servizio pubblico e condiviso, una query pesante viene rifiutata.
@@ -29,56 +44,36 @@ export async function cercaPercorsi(lat, lon, raggio = 8000) {
     (lon + dLon).toFixed(5),
   ].join(",");
 
-  // "body" e non "tags": tags stampa id e tag ma OMETTE i membri della
-  // relazione, e senza membri non arriva nessuna geometria da cui ricavare
-  // la traccia. È il motivo per cui la v0.4 non trovava mai niente.
-  // Le way servono due volte: con la geometria dentro le relazioni, per la
-  // traccia, e con i soli tag, per sapere che fondo hanno. I tag costano
-  // pochissimo rispetto alla geometria, che infatti non si richiede due volte.
-  const query = `[out:json][timeout:60][bbox:${riquadro}];
+  // "tags bb": i tag e il rettangolo di ingombro, niente membri e niente
+  // geometria. Il timeout è basso apposta — se questa non torna in venti
+  // secondi non tornerà, e tanto vale dirlo subito.
+  const query = `[out:json][timeout:25][bbox:${riquadro}];
 (
   relation["route"="mtb"];
   relation["route"="bicycle"]["network"~"lcn|rcn"];
-)->.rotte;
-.rotte out body geom;
-way(r.rotte);
-out tags;`;
+);
+out tags bb;`;
 
-  const dati = await interroga(query);
+  const dati = await interroga(query, opzioni);
   const elementi = (dati && dati.elements) || [];
-
-  // Prima i tag delle way, poi le relazioni che li useranno.
-  const tagWay = new Map();
-  for (const el of elementi) {
-    if (el.type === "way" && el.tags) tagWay.set(el.id, el.tags);
-  }
 
   const percorsi = [];
   for (const rel of elementi) {
     if (rel.type !== "relation") continue;
-
-    const way = (rel.members || []).filter(
-      (m) => m.type === "way" && Array.isArray(m.geometry) && m.geometry.length > 1
-    );
-    const segmenti = way.map((m) => m.geometry.map((g) => ({ lat: g.lat, lon: g.lon })));
-
-    if (!segmenti.length) continue;
-
-    const { punti, frammentato } = concatena(segmenti);
-    if (punti.length < 2) continue;
-
     const tags = rel.tags || {};
+
     percorsi.push({
       id: `osm_${rel.id}`,
+      idOsm: rel.id,
       nome: tags.name || tags.ref || `Percorso OSM ${rel.id}`,
       tipo: tags.route === "mtb" ? "MTB" : "Ciclabile",
       rete: (tags.network || "").toUpperCase(),
-      punti,
-      distanza: lunghezza(punti),
       // Quanto è lontano da dove hai cercato: il criterio con cui si ordina.
-      distanzaDaTe: distanzaMinima(punti, lat, lon),
-      fondo: fondoPrevalente(way, tagWay),
-      frammentato,
+      // Senza geometria si misura sul rettangolo di ingombro, che per un
+      // percorso locale è un'ottima approssimazione. Per una ciclovia che
+      // attraversa mezza Italia il rettangolo ti contiene e la distanza esce
+      // zero: è comunque vero che ti passa vicino, quindi va bene in cima.
+      distanzaDaTe: distanzaDalRiquadro(rel.bounds, lat, lon),
       fonte: "OpenStreetMap",
       url: `https://www.openstreetmap.org/relation/${rel.id}`,
     });
@@ -89,18 +84,63 @@ out tags;`;
   return percorsi.sort((a, b) => a.distanzaDaTe - b.distanzaDaTe);
 }
 
-// Distanza dal punto cercato al punto più vicino del percorso. Si campiona:
-// su una traccia di migliaia di punti la precisione al metro non serve a
-// nessuno, e moltiplicata per tutti i risultati costerebbe.
-function distanzaMinima(punti, lat, lon) {
-  const centro = { lat, lon };
-  const passo = Math.max(1, Math.floor(punti.length / 200));
-  let minimo = Infinity;
-  for (let i = 0; i < punti.length; i += passo) {
-    const d = haversine(centro, punti[i]);
-    if (d < minimo) minimo = d;
+// Secondo tempo: la traccia vera di una sola relazione.
+// Ritorna { punti, distanza, fondo, frammentato }.
+export async function caricaTraccia(idOsm, opzioni = {}) {
+  // Le way servono due volte: con la geometria, per la traccia, e con i soli
+  // tag, per sapere che fondo hanno. I tag costano pochissimo rispetto alla
+  // geometria, che infatti non si richiede due volte.
+  //
+  // "body" e non "tags": tags stampa id e tag ma OMETTE i membri della
+  // relazione, e senza membri non arriva nessuna geometria da cui ricavare
+  // la traccia. È il motivo per cui la v0.4 non trovava mai niente.
+  const query = `[out:json][timeout:60];
+relation(${Number(idOsm)})->.rotta;
+.rotta out body geom;
+way(r.rotta);
+out tags;`;
+
+  const dati = await interroga(query, opzioni);
+  const elementi = (dati && dati.elements) || [];
+
+  // Prima i tag delle way, poi la relazione che li userà.
+  const tagWay = new Map();
+  for (const el of elementi) {
+    if (el.type === "way" && el.tags) tagWay.set(el.id, el.tags);
   }
-  return minimo;
+
+  const rel = elementi.find((e) => e.type === "relation");
+  const way = ((rel && rel.members) || []).filter(
+    (m) => m.type === "way" && Array.isArray(m.geometry) && m.geometry.length > 1
+  );
+  const segmenti = way.map((m) => m.geometry.map((g) => ({ lat: g.lat, lon: g.lon })));
+
+  if (!segmenti.length) {
+    throw new Error("Questo percorso non ha una traccia utilizzabile su OpenStreetMap.");
+  }
+
+  const { punti, frammentato } = concatena(segmenti);
+  if (punti.length < 2) {
+    throw new Error("Questo percorso non ha una traccia utilizzabile su OpenStreetMap.");
+  }
+
+  return {
+    punti,
+    distanza: lunghezza(punti),
+    fondo: fondoPrevalente(way, tagWay),
+    frammentato,
+  };
+}
+
+// Distanza dal punto al rettangolo di ingombro: zero se ci sei dentro,
+// altrimenti la distanza dal lato più vicino.
+function distanzaDalRiquadro(bounds, lat, lon) {
+  if (!bounds) return Infinity;
+  const vicino = {
+    lat: Math.min(Math.max(lat, bounds.minlat), bounds.maxlat),
+    lon: Math.min(Math.max(lon, bounds.minlon), bounds.maxlon),
+  };
+  return haversine({ lat, lon }, vicino);
 }
 
 // Come classifichiamo i valori di surface e tracktype di OSM.
@@ -146,30 +186,59 @@ function fondoPrevalente(way, tagWay) {
   return valore > conosciuto * 0.7 ? primo : "misto";
 }
 
-const attesa = (ms) => new Promise((r) => setTimeout(r, ms));
+// Un'attesa che si interrompe se nel frattempo si annulla: altrimenti dopo
+// "Annulla" resterebbero due secondi di nulla prima di accorgersene.
+function attesa(ms, segnale) {
+  return new Promise((risolvi, rifiuta) => {
+    const timer = setTimeout(fine, ms);
+    function fine() {
+      clearTimeout(timer);
+      if (segnale) segnale.removeEventListener("abort", interrompi);
+      risolvi();
+    }
+    function interrompi() {
+      clearTimeout(timer);
+      if (segnale) segnale.removeEventListener("abort", interrompi);
+      const e = new Error("Annullato.");
+      e.annullata = true;
+      rifiuta(e);
+    }
+    if (segnale) {
+      if (segnale.aborted) return interrompi();
+      segnale.addEventListener("abort", interrompi);
+    }
+  });
+}
 
-async function interroga(query) {
+async function interroga(query, opzioni = {}) {
+  const { segnale = null, onStato = () => {} } = opzioni;
   let ultimoErrore = null;
   let ultimoStato = 0;
+  let scaduta = false;
 
-  for (const url of ENDPOINT) {
+  for (let m = 0; m < ENDPOINT.length; m++) {
+    const url = ENDPOINT[m];
+    if (m > 0) onStato("Il primo server non risponde: ne provo un altro…");
+
     // Il 429 di Overpass è quasi sempre una coda momentanea: vale un secondo
     // tentativo sullo stesso mirror prima di passare al successivo.
     for (let tentativo = 0; tentativo < 2; tentativo++) {
       try {
-        const risposta = await fetch(url, {
+        const esito = await chiediJson(url, {
           method: "POST",
           headers: { "Content-Type": "application/x-www-form-urlencoded" },
           body: `data=${encodeURIComponent(query)}`,
+          segnale,
         });
 
-        if (risposta.ok) return await risposta.json();
+        if (esito.ok) return esito.dati;
 
-        ultimoStato = risposta.status;
+        ultimoStato = esito.stato;
 
-        if (risposta.status === 429) {
+        if (esito.stato === 429) {
           if (tentativo === 0) {
-            await attesa(2000);
+            onStato("Overpass è in coda: aspetto due secondi…");
+            await attesa(2000, segnale);
             continue;
           }
           break;
@@ -179,6 +248,9 @@ async function interroga(query) {
         // mirror non serve a niente, si passa al prossimo.
         break;
       } catch (e) {
+        // Annullata da chi ha chiesto: non si prova nient'altro.
+        if (e.annullata) throw e;
+        if (e.scaduta) scaduta = true;
         ultimoErrore = e;
         break;
       }
@@ -197,6 +269,11 @@ async function interroga(query) {
   }
   if (ultimoStato) {
     throw new Error(`Overpass ha risposto ${ultimoStato}.`);
+  }
+  if (scaduta) {
+    throw new Error(
+      "OpenStreetMap non ha risposto in tempo. Controlla il campo e riprova: con poca rete conviene un raggio più piccolo."
+    );
   }
 
   throw ultimoErrore || new Error("Overpass non raggiungibile.");

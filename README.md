@@ -8,7 +8,7 @@ telefono o sul computer che stai usando. È una scelta di prodotto, non una funz
 
 Open source, licenza MIT. Di Andrea Giovannelli, Ascoli Piceno.
 
-Versione: **0.5.7 beta**.
+Versione: **0.5.8 beta**.
 
 ---
 
@@ -20,7 +20,8 @@ Versione: **0.5.7 beta**.
 - **Statistiche**: distanza, D+ / D−, quota massima, pendenza massima, difficoltà, durata
 - **Profilo altimetrico** sincronizzato con la mappa: passi il dito sul profilo, il punto si accende sulla mappa
 - **Quote automatiche**: un percorso senza altitudini le chiede da solo all'apertura, da tre fonti gratuite in cascata (Open-Meteo, OpenTopoData, Open-Elevation)
-- **Percorsi già mappati**: cerca su OpenStreetMap le tracce `route=mtb` e le ciclabili locali e regionali, ordinati per quanto sono vicini, con il fondo del sentiero (sterrato, asfalto, roccioso)
+- **Percorsi già mappati**: cerca su OpenStreetMap le tracce `route=mtb` e le ciclabili locali e regionali, ordinate per quanto sono vicine. L'elenco arriva subito perché chiede solo i nomi; la traccia si scarica quando ne tocchi una, insieme al fondo del sentiero (sterrato, asfalto, roccioso)
+- **Nessuna attesa senza fine**: ogni chiamata alla rete ha una scadenza sua e un pulsante «Annulla», perché in montagna il campo va e viene
 - **Cerca un posto per nome** con Nominatim: scrivi "Amandola" e la mappa ci va
 - **Meteo in vetta**: tre giorni sul punto più alto del giro, non a valle
 - **Fontane e rifugi lungo il percorso**, presi da OpenStreetMap, con scritto dopo quanti chilometri li incontri

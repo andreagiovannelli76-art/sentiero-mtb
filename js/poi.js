@@ -6,6 +6,7 @@
 // accetterebbe.
 
 import { douglasPeucker, haversine, progressive } from "./geo.js";
+import { chiediJson } from "./rete.js";
 
 const ENDPOINT = [
   "https://overpass-api.de/api/interpreter",
@@ -96,22 +97,27 @@ function puntoPiuVicino(punti, p) {
 
 async function interroga(query) {
   let ultimoStato = 0;
+  let scaduta = false;
   for (const url of ENDPOINT) {
     try {
-      const risposta = await fetch(url, {
+      const esito = await chiediJson(url, {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: `data=${encodeURIComponent(query)}`,
       });
-      if (risposta.ok) return await risposta.json();
-      ultimoStato = risposta.status;
+      if (esito.ok) return esito.dati;
+      ultimoStato = esito.stato;
     } catch (e) {
+      if (e.scaduta) scaduta = true;
       /* si prova il mirror successivo */
     }
   }
+  if (ultimoStato === 429 || ultimoStato === 504) {
+    throw new Error("Overpass è occupato: riprova fra un minuto.");
+  }
   throw new Error(
-    ultimoStato === 429 || ultimoStato === 504
-      ? "Overpass è occupato: riprova fra un minuto."
+    scaduta
+      ? "OpenStreetMap non ha risposto in tempo: i punti d'appoggio si possono chiedere di nuovo."
       : "Non riesco a chiedere i punti d'appoggio a OpenStreetMap."
   );
 }

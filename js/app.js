@@ -15,13 +15,13 @@ import { Tracker, posizioneAttuale, osservaPosizione, tieniSchermoAcceso } from 
 import { Guida } from "./follow.js";
 import { creaLink, leggiLink, LIMITE_URL } from "./share.js";
 import { correggiQuote } from "./elevation.js";
-import { cercaPercorsi } from "./osm.js";
+import { cercaPercorsi, caricaTraccia } from "./osm.js";
 import { cercaLuogo } from "./geocode.js";
 import { previsione, puntoPiuAlto } from "./weather.js";
 import { cercaPunti } from "./poi.js";
 import { mostraIntro, introGiaVista } from "./intro.js";
 
-export const APP_VERSION = "0.5.7-beta";
+export const APP_VERSION = "0.5.8-beta";
 
 // Numero del canale feedback beta. Pubblico nel sorgente: è una scelta consapevole.
 const REPORT_WA = "393484791772";
@@ -458,10 +458,15 @@ async function vaiA(luogo) {
 
 async function cerca(lat, lon) {
   const raggio = parseInt(el("raggio").value, 10);
-  lavoro(true, "Interrogo OpenStreetMap…");
+  const controllo = new AbortController();
+
+  lavoro(true, "Interrogo OpenStreetMap…", () => controllo.abort());
 
   try {
-    const risultati = await cercaPercorsi(lat, lon, raggio);
+    const risultati = await cercaPercorsi(lat, lon, raggio, {
+      segnale: controllo.signal,
+      onStato: lavoroDice,
+    });
     stato.risultatiOsm = risultati;
 
     const ul = el("lista-osm");
@@ -480,19 +485,48 @@ async function cerca(lat, lon) {
         <div class="nome">
           ${testoSicuro(r.nome)}
           <div class="meta">
-            ${formattaDistanza(r.distanza)} · ${testoSicuro(r.tipo)}${r.fondo ? " · " + testoSicuro(r.fondo) : ""}${r.rete ? " · " + testoSicuro(r.rete) : ""}
-            <br>a ${formattaDistanza(r.distanzaDaTe)} da qui${r.frammentato ? " · traccia incompleta su OSM" : ""}
+            ${testoSicuro(r.tipo)}${r.rete ? " · " + testoSicuro(r.rete) : ""}
+            <br>${quantoLontano(r.distanzaDaTe)} · tocca per la traccia
           </div>
         </div>
         <span class="pillola osm">OSM</span>
       `;
-      li.addEventListener("click", () => apriPercorso({ ...r }, false));
+      li.addEventListener("click", () => apriRisultatoOsm(r));
       ul.appendChild(li);
     }
 
     avvisa(risultati.length === 1 ? "1 percorso trovato." : `${risultati.length} percorsi trovati.`);
   } catch (e) {
-    avvisa(e.message || "Ricerca non riuscita.", true);
+    if (e.annullata) avvisa("Ricerca annullata.");
+    else avvisa(e.message || "Ricerca non riuscita.", true);
+  } finally {
+    lavoro(false);
+  }
+}
+
+// Senza geometria la distanza si misura sul rettangolo di ingombro: se ci sei
+// dentro viene zero, e "a 0 m da qui" non vuol dire niente.
+function quantoLontano(metri) {
+  if (!isFinite(metri)) return "in zona";
+  return metri < 200 ? "qui intorno" : `a ${formattaDistanza(metri)} da qui`;
+}
+
+// La traccia si scarica adesso, per questo percorso soltanto. È la parte
+// pesante: quanto pesante dipende da quanto è lungo il giro, per questo si
+// può annullare.
+async function apriRisultatoOsm(risultato) {
+  const controllo = new AbortController();
+  lavoro(true, `Carico la traccia di ${risultato.nome}…`, () => controllo.abort());
+
+  try {
+    const traccia = await caricaTraccia(risultato.idOsm, {
+      segnale: controllo.signal,
+      onStato: lavoroDice,
+    });
+    apriPercorso({ ...risultato, ...traccia }, false);
+  } catch (e) {
+    if (e.annullata) avvisa("Caricamento annullato.");
+    else avvisa(e.message || "Traccia non caricata.", true);
   } finally {
     lavoro(false);
   }
@@ -891,6 +925,10 @@ function collegaEventi() {
     b.addEventListener("click", () => mostraVista(b.dataset.vista));
   }
 
+  el("velo-annulla").addEventListener("click", () => {
+    if (annullaLavoro) annullaLavoro();
+  });
+
   el("btn-report").addEventListener("click", apriReport);
   el("btn-guida").addEventListener("click", mostraIntro);
   el("btn-indietro").addEventListener("click", () => mostraVista(stato.vistaPrecedente));
@@ -993,9 +1031,21 @@ function avvisa(messaggio, errore = false) {
   }, errore ? 6000 : 3500);
 }
 
-function lavoro(attivo, testo = "Un attimo…") {
+// Il velo. `suAnnulla`, se c'è, fa comparire il pulsante che interrompe.
+// Un'attesa senza via d'uscita è il modo più veloce per far credere che
+// l'app sia morta: se qualcosa può durare, deve poter finire quando vuoi tu.
+let annullaLavoro = null;
+
+function lavoro(attivo, testo = "Un attimo…", suAnnulla = null) {
   el("velo-testo").textContent = testo;
   el("velo").hidden = !attivo;
+  annullaLavoro = attivo ? suAnnulla : null;
+  el("velo-annulla").hidden = !(attivo && suAnnulla);
+}
+
+// Cambia solo la scritta, se il velo è ancora quello di prima.
+function lavoroDice(testo) {
+  if (!el("velo").hidden) el("velo-testo").textContent = testo;
 }
 
 function maiuscola(s) {

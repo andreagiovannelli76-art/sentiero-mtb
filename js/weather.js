@@ -4,6 +4,8 @@
 // usiamo per le quote. In montagna il meteo a valle non dice niente, quindi
 // si chiede proprio in vetta, dove si decide se la giornata è quella giusta.
 
+import { chiediJson } from "./rete.js";
+
 const ENDPOINT = "https://api.open-meteo.com/v1/forecast";
 
 // Codici WMO. Non tutti: solo quelli che capitano davvero, raggruppati come
@@ -39,15 +41,17 @@ export async function previsione(lat, lon, giorni = 3) {
     `&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_sum,windspeed_10m_max` +
     `&timezone=auto&forecast_days=${giorni}`;
 
-  let risposta;
+  let esito;
   try {
-    risposta = await fetch(url);
+    esito = await chiediJson(url);
   } catch (e) {
-    throw new Error("Previsioni non raggiungibili.");
+    throw new Error(
+      e.scaduta ? "Le previsioni non hanno risposto in tempo." : "Previsioni non raggiungibili."
+    );
   }
-  if (!risposta.ok) throw new Error(`Le previsioni hanno risposto ${risposta.status}.`);
+  if (!esito.ok) throw new Error(`Le previsioni hanno risposto ${esito.stato}.`);
 
-  const dati = await risposta.json();
+  const dati = esito.dati;
   const d = dati && dati.daily;
   if (!d || !Array.isArray(d.time)) throw new Error("Previsioni non leggibili.");
 

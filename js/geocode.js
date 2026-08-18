@@ -5,6 +5,8 @@
 // interrogarlo a ogni tasto premuto. Per questo si cerca solo su invio o sul
 // pulsante, mai mentre si scrive.
 
+import { chiediJson } from "./rete.js";
+
 const ENDPOINT = "https://nominatim.openstreetmap.org/search";
 
 // Un minimo di respiro fra due ricerche, anche se l'utente insiste.
@@ -24,21 +26,25 @@ export async function cercaLuogo(testo, quanti = 6) {
     `${ENDPOINT}?format=jsonv2&limit=${quanti}` +
     `&accept-language=it&q=${encodeURIComponent(query)}`;
 
-  let risposta;
+  let esito;
   try {
-    risposta = await fetch(url, { headers: { Accept: "application/json" } });
+    esito = await chiediJson(url, { headers: { Accept: "application/json" } });
   } catch (e) {
-    throw new Error("Ricerca dei luoghi non raggiungibile. Controlla la connessione.");
+    throw new Error(
+      e.scaduta
+        ? "La ricerca dei luoghi non ha risposto in tempo. Riprova."
+        : "Ricerca dei luoghi non raggiungibile. Controlla la connessione."
+    );
   }
 
-  if (risposta.status === 429) {
+  if (esito.stato === 429) {
     throw new Error("Troppe ricerche di seguito: aspetta qualche secondo.");
   }
-  if (!risposta.ok) {
-    throw new Error(`La ricerca dei luoghi ha risposto ${risposta.status}.`);
+  if (!esito.ok) {
+    throw new Error(`La ricerca dei luoghi ha risposto ${esito.stato}.`);
   }
 
-  const dati = await risposta.json();
+  const dati = esito.dati;
   if (!Array.isArray(dati)) return [];
 
   return dati

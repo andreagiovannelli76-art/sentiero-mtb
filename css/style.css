@@ -508,6 +508,9 @@ main {
   max-width: 80vw;
 }
 .lavoro p { margin: 12px 0 0; font-size: 13px; color: var(--testo-tenue); }
+/* Compare solo quando l'attesa ha una via d'uscita: un pulsante che non
+   annulla niente sarebbe peggio del velo fisso. */
+#velo-annulla { margin-top: 14px; }
 
 .rotella {
   width: 26px;

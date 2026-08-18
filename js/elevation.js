@@ -7,6 +7,8 @@
 // L'ordine non è casuale: prima il servizio più affidabile, poi quello più
 // preciso sulle nostre montagne, infine quello storico come ultima rete.
 
+import { chiediJson } from "./rete.js";
+
 const PROVIDER = [
   {
     nome: "Open-Meteo",
@@ -17,13 +19,12 @@ const PROVIDER = [
     async chiedi(punti) {
       const lat = punti.map((p) => p.lat.toFixed(6)).join(",");
       const lon = punti.map((p) => p.lon.toFixed(6)).join(",");
-      const risposta = await fetch(
+      const esito = await chiediJson(
         `https://api.open-meteo.com/v1/elevation?latitude=${lat}&longitude=${lon}`
       );
-      if (!risposta.ok) throw new Error(`stato ${risposta.status}`);
-      const dati = await risposta.json();
-      if (!Array.isArray(dati.elevation)) throw new Error("risposta senza quote");
-      return dati.elevation;
+      if (!esito.ok) throw new Error(`stato ${esito.stato}`);
+      if (!Array.isArray(esito.dati.elevation)) throw new Error("risposta senza quote");
+      return esito.dati.elevation;
     },
   },
   {
@@ -35,13 +36,12 @@ const PROVIDER = [
     pausa: 1100,
     async chiedi(punti) {
       const luoghi = punti.map((p) => `${p.lat.toFixed(6)},${p.lon.toFixed(6)}`).join("|");
-      const risposta = await fetch(
+      const esito = await chiediJson(
         `https://api.opentopodata.org/v1/eu_dem25m?locations=${luoghi}`
       );
-      if (!risposta.ok) throw new Error(`stato ${risposta.status}`);
-      const dati = await risposta.json();
-      if (!Array.isArray(dati.results)) throw new Error("risposta senza quote");
-      return dati.results.map((r) => r.elevation);
+      if (!esito.ok) throw new Error(`stato ${esito.stato}`);
+      if (!Array.isArray(esito.dati.results)) throw new Error("risposta senza quote");
+      return esito.dati.results.map((r) => r.elevation);
     },
   },
   {
@@ -51,17 +51,16 @@ const PROVIDER = [
     blocco: 100,
     pausa: 250,
     async chiedi(punti) {
-      const risposta = await fetch("https://api.open-elevation.com/api/v1/lookup", {
+      const esito = await chiediJson("https://api.open-elevation.com/api/v1/lookup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           locations: punti.map((p) => ({ latitude: p.lat, longitude: p.lon })),
         }),
       });
-      if (!risposta.ok) throw new Error(`stato ${risposta.status}`);
-      const dati = await risposta.json();
-      if (!Array.isArray(dati.results)) throw new Error("risposta senza quote");
-      return dati.results.map((r) => r.elevation);
+      if (!esito.ok) throw new Error(`stato ${esito.stato}`);
+      if (!Array.isArray(esito.dati.results)) throw new Error("risposta senza quote");
+      return esito.dati.results.map((r) => r.elevation);
     },
   },
 ];
