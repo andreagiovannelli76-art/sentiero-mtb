@@ -4,6 +4,7 @@
 import { haversine, lunghezza } from "./geo.js";
 import { chiediJson } from "./rete.js";
 import { daCache, inCache } from "./db.js";
+import { cercaPercorsi as cercaSuWaymarked } from "./waymarked.js";
 
 // Overpass è un servizio pubblico e gratuito, tenuto in piedi da volontari:
 // nelle ore di punta una richiesta può restare in coda per un minuto. Non è
@@ -88,12 +89,44 @@ out tags;`;
   // La chiave è il riquadro stesso: cercare due volte dallo stesso punto con
   // lo stesso raggio è la cosa più normale del mondo, e la seconda volta deve
   // essere immediata.
+  // La memoria del telefono viene prima di qualunque fonte.
   const chiave = `elenco:${riquadro}`;
   const salvato = opzioni.ignoraCache ? null : await daCache(chiave, VALIDITA_ELENCO);
-  if (opzioni.onFonte) opzioni.onFonte(salvato ? "memoria" : "rete");
-  const dati = salvato || (await interroga(query, opzioni));
-  if (!salvato) await inCache(chiave, dati);
+  if (salvato) {
+    if (opzioni.onFonte) opzioni.onFonte("memoria");
+    return leggiElenco(salvato);
+  }
 
+  // Poi Waymarked Trails, che a questa domanda ha già la risposta pronta.
+  // Se non risponde — è giù, non parla con noi dal browser, ha cambiato
+  // formato — si scende su Overpass senza dire niente a nessuno: l'utente
+  // vuole i percorsi, non sapere da quale porta sono entrati.
+  try {
+    const veloci = await cercaSuWaymarked(
+      lat - dLat, lon - dLon, lat + dLat, lon + dLon, opzioni
+    );
+    if (veloci.length) {
+      if (opzioni.onFonte) opzioni.onFonte("waymarked");
+      await inCache(chiave, { fonte: "waymarked", percorsi: veloci });
+      return veloci;
+    }
+    // Elenco vuoto: può essere vero (qui non c'è niente) o può essere un
+    // formato che non abbiamo saputo leggere. Overpass toglie il dubbio, e
+    // costa una ricerca sola.
+  } catch (e) {
+    if (e.annullata) throw e;
+    console.warn("Waymarked Trails non utilizzabile, passo a Overpass:", e.message);
+  }
+
+  if (opzioni.onFonte) opzioni.onFonte("rete");
+  const dati = await interroga(query, opzioni);
+  await inCache(chiave, dati);
+
+  return daOverpass(dati);
+}
+
+// Da una risposta di Overpass all'elenco che si mostra.
+function daOverpass(dati) {
   const elementi = (dati && dati.elements) || [];
 
   const percorsi = [];
@@ -117,6 +150,15 @@ out tags;`;
   // ritrovare un nome che conosci. La distanza esatta la sa solo la traccia,
   // e arriva quando ne apri uno.
   return percorsi.sort((a, b) => a.nome.localeCompare(b.nome, "it"));
+}
+
+// In memoria può esserci una risposta di Overpass (con "elements") oppure un
+// elenco già pronto di Waymarked Trails: si riconosce da cosa c'è dentro.
+function leggiElenco(salvato) {
+  if (salvato && salvato.fonte === "waymarked" && Array.isArray(salvato.percorsi)) {
+    return salvato.percorsi;
+  }
+  return daOverpass(salvato);
 }
 
 // Secondo tempo: la traccia vera di una sola relazione.

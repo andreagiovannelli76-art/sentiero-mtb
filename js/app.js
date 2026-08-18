@@ -22,7 +22,7 @@ import { cercaPunti } from "./poi.js";
 import { testo as registroRete } from "./registro.js";
 import { mostraIntro, introGiaVista } from "./intro.js";
 
-export const APP_VERSION = "0.5.12-beta";
+export const APP_VERSION = "0.5.13-beta";
 
 // Numero del canale feedback beta. Pubblico nel sorgente: è una scelta consapevole.
 const REPORT_WA = "393484791772";
@@ -483,7 +483,7 @@ async function cerca(lat, lon) {
   const insiste = ultimaRicerca.dove === dove && Date.now() - ultimaRicerca.quando < 60000;
   ultimaRicerca = { dove, quando: Date.now() };
 
-  let daMemoria = false;
+  let fonte = "rete";
   lavoro(true, "Interrogo OpenStreetMap…", () => controllo.abort());
 
   try {
@@ -491,7 +491,7 @@ async function cerca(lat, lon) {
       segnale: controllo.signal,
       onStato: lavoroDice,
       ignoraCache: insiste,
-      onFonte: (f) => { daMemoria = f === "memoria"; },
+      onFonte: (f) => { fonte = f; },
     });
     stato.risultatiOsm = risultati;
 
@@ -524,7 +524,11 @@ async function cerca(lat, lon) {
     const quanti = risultati.length === 1 ? "1 percorso trovato" : `${risultati.length} percorsi trovati`;
     // Se la risposta arriva dalla memoria va detto: altrimenti un elenco
     // vecchio di giorni sembra appena controllato.
-    avvisa(daMemoria ? `${quanti} (dalla memoria del telefono — ripremi «Cerca qui» per aggiornare).` : `${quanti}.`);
+    avvisa(
+      fonte === "memoria"
+        ? `${quanti} (dalla memoria del telefono — ripremi «Cerca qui» per aggiornare).`
+        : `${quanti}.`
+    );
   } catch (e) {
     if (e.annullata) avvisa("Ricerca annullata.");
     else avvisa(e.message || "Ricerca non riuscita.", true);

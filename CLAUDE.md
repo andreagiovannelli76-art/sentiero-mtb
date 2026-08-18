@@ -143,6 +143,7 @@ Principio: **prima i percorsi esistenti (OSM), poi la community, poi il premium.
 | 0.5.10 ✅ | Tre mirror Overpass interrogati in staffetta: chi risponde per primo vince | rilasciata: la ricerca non dipende più dal server più lento |
 | 0.5.11 ✅ | Query dell'elenco davvero minima (`out tags`, niente `bb`: il rettangolo di ingombro costava quanto la geometria) · registro delle chiamate di rete allegato alle segnalazioni | rilasciata |
 | 0.5.12 ✅ | Memoria locale delle risposte OSM (elenchi 7 giorni, tracce 30) · «Portami all'inizio» apre il navigatore del telefono | rilasciata |
+| 0.5.13 ✅ | Waymarked Trails come fonte primaria dell'elenco, Overpass come riserva automatica | rilasciata: da verificare sul campo se l'API risponde dal browser |
 | 0.6 | Backend Supabase: auth, libreria pubblica condivisa, "rendi pubblico" un giro, foto, autore, like/commenti | trasforma il tool in community |
 | 0.7 | Schede guida: descrizione tecnica, stagionalità · punti pericolosi | i POI acqua/rifugi sono già arrivati in 0.5.5 |
 | 0.8 | Guide premium: flag `premium`, Stripe, accesso a pagamento · tile offline per zona | monetizzazione |
