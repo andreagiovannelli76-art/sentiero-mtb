@@ -22,7 +22,7 @@ import { cercaPunti } from "./poi.js";
 import { testo as registroRete } from "./registro.js";
 import { mostraIntro, introGiaVista } from "./intro.js";
 
-export const APP_VERSION = "0.5.13-beta";
+export const APP_VERSION = "0.5.14-beta";
 
 // Numero del canale feedback beta. Pubblico nel sorgente: è una scelta consapevole.
 const REPORT_WA = "393484791772";
@@ -495,6 +495,8 @@ async function cerca(lat, lon) {
     });
     stato.risultatiOsm = risultati;
 
+    el("osm-diagnostica").hidden = true;
+
     const ul = el("lista-osm");
     ul.innerHTML = "";
     el("osm-vuota").hidden = risultati.length > 0;
@@ -530,11 +532,25 @@ async function cerca(lat, lon) {
         : `${quanti}.`
     );
   } catch (e) {
-    if (e.annullata) avvisa("Ricerca annullata.");
-    else avvisa(e.message || "Ricerca non riuscita.", true);
+    if (e.annullata) {
+      avvisa("Ricerca annullata.");
+    } else {
+      avvisa(e.message || "Ricerca non riuscita.", true);
+      // Il referto: quali server, che esito, quanti secondi. Senza questo,
+      // "non funziona" resta indistinguibile fra un servizio in coda, un
+      // servizio che ci rifiuta e una connessione che non esce di casa.
+      mostraDiagnostica();
+    }
   } finally {
     lavoro(false);
   }
+}
+
+function mostraDiagnostica() {
+  const righe = registroRete(8);
+  if (!righe) return;
+  el("osm-registro").textContent = righe;
+  el("osm-diagnostica").hidden = false;
 }
 
 // La traccia si scarica adesso, per questo percorso soltanto. È la parte

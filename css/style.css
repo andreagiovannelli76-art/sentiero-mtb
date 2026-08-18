@@ -563,3 +563,27 @@ main {
   }
   .tab { grid-template-columns: repeat(4, minmax(0, 160px)); justify-content: center; }
 }
+
+/* Il referto dell'ultimo tentativo fallito. Chiuso di default: chi non ne ha
+   bisogno non lo apre, chi deve segnalare un problema lo fotografa. */
+.diagnostica {
+  margin: 12px 0 0;
+  border: 1px solid var(--bordo);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: var(--carta);
+}
+.diagnostica summary {
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--testo-tenue);
+}
+.diagnostica pre {
+  margin: 10px 0 0;
+  font-size: 11px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--testo);
+}
+.diagnostica .nota { margin-top: 8px; }

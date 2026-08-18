@@ -289,13 +289,24 @@ async function interroga(query, opzioni = {}) {
     segnale.addEventListener("abort", inoltra);
   }
 
-  const richiesta = {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: `data=${encodeURIComponent(query)}`,
-    segnale: corsa.signal,
-    scadenza: SCADENZA_OVERPASS,
-  };
+  // Overpass accetta la query sia nel corpo di una POST sia nell'indirizzo di
+  // una GET. Le nostre query sono corte — poche centinaia di caratteri — e la
+  // GET è la strada meno accidentata: qualche rete mobile e qualche proxy
+  // aziendale trattano con sospetto le POST verso host non noti, e una GET
+  // può anche essere messa in cache da chi sta nel mezzo.
+  // Sopra una certa lunghezza l'indirizzo non è più affidabile e si torna
+  // alla POST, che non ha limiti pratici.
+  const inIndirizzo = query.length < 1500;
+  const richiesta = inIndirizzo
+    ? { segnale: corsa.signal, scadenza: SCADENZA_OVERPASS }
+    : {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: `data=${encodeURIComponent(query)}`,
+        segnale: corsa.signal,
+        scadenza: SCADENZA_OVERPASS,
+      };
+  const coda = inIndirizzo ? `?data=${encodeURIComponent(query)}` : "";
 
   const stati = [];
   let inGara = 0;
@@ -308,7 +319,7 @@ async function interroga(query, opzioni = {}) {
     inGara++;
     if (inGara === 2) onStato("Il primo server è lento: ne interrogo un altro in parallelo…");
 
-    const esito = await chiediJson(url, richiesta);
+    const esito = await chiediJson(url + coda, richiesta);
     if (!esito.ok) {
       stati.push(esito.stato);
       throw new Error(`stato ${esito.stato}`);
