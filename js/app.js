@@ -17,7 +17,7 @@ import { creaLink, leggiLink, LIMITE_URL } from "./share.js";
 import { correggiQuote } from "./elevation.js";
 import { cercaPercorsi } from "./osm.js";
 
-export const APP_VERSION = "0.5.1-beta";
+export const APP_VERSION = "0.5.2-beta";
 
 // Numero del canale feedback beta. Pubblico nel sorgente: è una scelta consapevole.
 const REPORT_WA = "393484791772";
@@ -256,15 +256,21 @@ function apriPercorso(percorso, salvato) {
   el("btn-salva").hidden = !!salvato;
   el("btn-elimina").hidden = !salvato;
 
-  rinfrescaStatistiche();
+  const s = rinfrescaStatistiche();
   disegnaTraccia(percorso.punti);
   profilo.imposta(percorso.punti);
   mostraVista("dettaglio");
+
+  // I percorsi presi da OSM arrivano senza quote: senza dirlo, l'utente vede
+  // solo trattini e non ha modo di sapere che si rimedia con un pulsante.
+  if (!s.haQuote) {
+    avvisa("Percorso senza quote: premi «Correggi quote» per dislivello e profilo.");
+  }
 }
 
 function rinfrescaStatistiche() {
   const p = stato.attivo;
-  if (!p) return;
+  if (!p) return { haQuote: true };
   const s = statistiche(p.punti);
 
   const voci = [
@@ -280,6 +286,8 @@ function rinfrescaStatistiche() {
   el("dettaglio-stat").innerHTML = voci
     .map(([k, v]) => `<div class="voce"><span>${k}</span><strong>${testoSicuro(v)}</strong></div>`)
     .join("");
+
+  return s;
 }
 
 // ---------------------------------------------------------------- registrazione

@@ -30,11 +30,20 @@ export async function correggiQuote(punti, onProgresso) {
       longitude: punti[k].lon,
     }));
 
-    const risposta = await fetch(ENDPOINT, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ locations }),
-    });
+    let risposta;
+    try {
+      risposta = await fetch(ENDPOINT, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ locations }),
+      });
+    } catch (e) {
+      // Rete assente, servizio giù, CORS: al browser arriva un errore generico
+      // il cui messaggio ("Failed to fetch") non dice niente a nessuno.
+      throw new Error(
+        "Open-Elevation non risponde. È un servizio pubblico e gratuito, capita che sia giù: riprova più tardi."
+      );
+    }
 
     if (!risposta.ok) {
       throw new Error(
