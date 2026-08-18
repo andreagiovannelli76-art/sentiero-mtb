@@ -21,7 +21,7 @@ import { previsione, puntoPiuAlto } from "./weather.js";
 import { cercaPunti } from "./poi.js";
 import { mostraIntro, introGiaVista } from "./intro.js";
 
-export const APP_VERSION = "0.5.8-beta";
+export const APP_VERSION = "0.5.9-beta";
 
 // Numero del canale feedback beta. Pubblico nel sorgente: è una scelta consapevole.
 const REPORT_WA = "393484791772";
@@ -71,7 +71,16 @@ const el = (id) => document.getElementById(id);
 
 avvia().catch((e) => {
   console.error(e);
-  avvisa("Errore in avvio: " + e.message, true);
+  // Qualunque cosa sia andata storta, il velo non deve restare su: uno
+  // schermo grigio che non si toglie è peggio dell'errore stesso.
+  lavoro(false);
+  // Il messaggio grezzo del browser è in inglese e non dice cosa fare.
+  avvisa(
+    e && e.spiegato
+      ? e.message
+      : "Qualcosa non è partito. Ricarica la pagina; se continua, usa la bandierina in alto a destra per segnalarlo.",
+    true
+  );
 });
 
 async function avvia() {

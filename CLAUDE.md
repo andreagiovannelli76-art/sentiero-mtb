@@ -139,6 +139,7 @@ Principio: **prima i percorsi esistenti (OSM), poi la community, poi il premium.
 | 0.5.6 ✅ | Guida del primo avvio, 3 schermate · riapribile da «Come funziona» | rilasciata: la linea 0.5 è completa |
 | 0.5.7 ✅ | Due richieste sullo stesso percorso non si scacciano più | rilasciata |
 | 0.5.8 ✅ | Ricerca OSM in due tempi: elenco subito, traccia solo per quello che tocchi · scadenza e «Annulla» su ogni chiamata di rete | rilasciata: risolve l'attesa infinita su «Interrogo OpenStreetMap…» |
+| 0.5.9 ✅ | L'archivio locale si ripara da solo se la creazione è rimasta a metà · nessun errore in inglese all'avvio · il velo non resta mai su | rilasciata: risolve «object store was not found» su iPhone |
 | 0.6 | Backend Supabase: auth, libreria pubblica condivisa, "rendi pubblico" un giro, foto, autore, like/commenti | trasforma il tool in community |
 | 0.7 | Schede guida: descrizione tecnica, stagionalità · punti pericolosi | i POI acqua/rifugi sono già arrivati in 0.5.5 |
 | 0.8 | Guide premium: flag `premium`, Stripe, accesso a pagamento · tile offline per zona | monetizzazione |
