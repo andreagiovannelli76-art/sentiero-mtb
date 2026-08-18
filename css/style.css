@@ -597,3 +597,26 @@ main {
 .azioni-principali .btn {
   flex: 1 1 45%;
 }
+
+/* Il filtro dei risultati: adesso che l'elenco contiene anche ciclovie e
+   sentieri a piedi, chi cerca solo giri MTB deve poterli isolare al volo. */
+.filtri {
+  display: flex;
+  gap: 8px;
+  margin: 12px 0 0;
+  flex-wrap: wrap;
+}
+.chip {
+  border: 1px solid var(--bordo);
+  background: var(--carta);
+  color: var(--testo-tenue);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.chip.attivo {
+  background: var(--moss);
+  border-color: var(--moss);
+  color: #fff;
+}

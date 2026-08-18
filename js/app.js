@@ -22,7 +22,7 @@ import { cercaPunti } from "./poi.js";
 import { testo as registroRete } from "./registro.js";
 import { mostraIntro, introGiaVista } from "./intro.js";
 
-export const APP_VERSION = "0.5.20-beta";
+export const APP_VERSION = "0.5.21-beta";
 
 // Numero del canale feedback beta. Pubblico nel sorgente: è una scelta consapevole.
 const REPORT_WA = "393484791772";
@@ -477,6 +477,10 @@ async function vaiA(luogo) {
 // OpenStreetMap. È il gesto che tutti fanno quando un risultato non convince.
 let ultimaRicerca = { dove: "", quando: 0 };
 
+// Il tipo di percorso che si sta guardando: "tutti", "MTB", "Ciclabile" o
+// "Sentiero". Vive in memoria e non si salva: e' una lente, non una scelta.
+let filtroOsm = "tutti";
+
 async function cerca(lat, lon) {
   const raggio = parseInt(el("raggio").value, 10);
   const controllo = new AbortController();
@@ -538,19 +542,29 @@ function mostraDiagnostica() {
 function mostraRisultatiOsm(risultati, vuoto) {
   stato.risultatiOsm = risultati;
   el("osm-diagnostica").hidden = true;
+  el("filtri-osm").hidden = !risultati.length;
+  dipingiRisultatiOsm(vuoto);
+}
+
+// Ridisegna l'elenco applicando il filtro. Separato dalla ricerca perché il
+// filtro cambia senza dover richiedere niente a nessuno.
+function dipingiRisultatiOsm(vuoto) {
+  const tutti = stato.risultatiOsm || [];
+  const visibili = filtroOsm === "tutti" ? tutti : tutti.filter((r) => r.tipo === filtroOsm);
 
   const ul = el("lista-osm");
   ul.innerHTML = "";
-  el("osm-vuota").hidden = risultati.length > 0;
+  el("osm-vuota").hidden = visibili.length > 0;
 
-  if (!risultati.length) {
-    el("osm-vuota").textContent =
-      vuoto ||
-      "Nessun percorso mappato qui. La copertura OSM è disomogenea: sui Sibillini è ottima, sulle colline picene molto meno.";
+  if (!visibili.length) {
+    el("osm-vuota").textContent = tutti.length
+      ? "Nessun percorso di questo tipo qui: prova un altro filtro."
+      : vuoto ||
+        "Nessun percorso mappato qui. La copertura OSM è disomogenea: sui Sibillini è ottima, sulle colline picene molto meno.";
     return;
   }
 
-  for (const r of risultati) {
+  for (const r of visibili) {
     const li = document.createElement("li");
     li.innerHTML = `
       <div class="nome">
@@ -1091,6 +1105,16 @@ function apriReport() {
 function collegaEventi() {
   for (const b of el("tab").querySelectorAll("button")) {
     b.addEventListener("click", () => mostraVista(b.dataset.vista));
+  }
+
+  for (const chip of el("filtri-osm").querySelectorAll(".chip")) {
+    chip.addEventListener("click", () => {
+      filtroOsm = chip.dataset.tipo;
+      for (const c of el("filtri-osm").querySelectorAll(".chip")) {
+        c.classList.toggle("attivo", c === chip);
+      }
+      dipingiRisultatiOsm();
+    });
   }
 
   el("velo-annulla").addEventListener("click", () => {

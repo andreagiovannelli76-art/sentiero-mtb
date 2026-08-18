@@ -24,7 +24,7 @@
     <img src="icons/icon.svg" alt="" width="30" height="30">
     <div>
       <h1>SENTIERO</h1>
-      <p class="sottotitolo">Percorsi MTB · open source · v0.5.20 beta</p>
+      <p class="sottotitolo">Percorsi MTB · open source · v0.5.21 beta</p>
     </div>
   </div>
   <button id="btn-report" class="icona" title="Segnala un problema su WhatsApp" aria-label="Segnala un problema">⚑</button>
@@ -109,6 +109,13 @@
         </select>
         <button class="btn primario" id="btn-cerca-qui">Cerca qui</button>
         <button class="btn fantasma" id="btn-vicino">Vicino a me</button>
+      </div>
+
+      <div class="filtri" id="filtri-osm" hidden>
+        <button class="chip attivo" data-tipo="tutti">Tutti</button>
+        <button class="chip" data-tipo="MTB">MTB</button>
+        <button class="chip" data-tipo="Ciclabile">Ciclabili</button>
+        <button class="chip" data-tipo="Sentiero">Sentieri</button>
       </div>
 
       <details class="diagnostica" id="osm-diagnostica" hidden>

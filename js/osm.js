@@ -79,13 +79,16 @@ export async function cercaPercorsi(lat, lon, raggio = 8000, opzioni = {}) {
   // relazione e tutti i loro nodi: il lavoro del server è lo stesso della
   // geometria completa. Si risparmiava traffico, non attesa — ed era l'attesa
   // il problema.
-  // Anche i sentieri escursionistici: sull'Appennino i giri MTB corrono
-  // sulla rete CAI, che su OSM e' route=hiking. Il tipo li distingue in lista.
+  // Tutto quello che si puo' percorrere: i giri MTB, le ciclovie di ogni
+  // rete — dalle locali alle EuroVelo, prima si prendevano solo lcn/rcn — e
+  // la rete escursionistica, hiking e foot, dove sull'Appennino si pedala
+  // davvero. Il tipo li distingue in lista, e il filtro lascia scegliere.
   const query = `[out:json][timeout:25][bbox:${riquadro}];
 (
   relation["route"="mtb"];
-  relation["route"="bicycle"]["network"~"lcn|rcn"];
+  relation["route"="bicycle"];
   relation["route"="hiking"];
+  relation["route"="foot"];
 );
 out tags;`;
 
@@ -93,7 +96,7 @@ out tags;`;
   // lo stesso raggio è la cosa più normale del mondo, e la seconda volta deve
   // essere immediata.
   // La memoria del telefono viene prima di qualunque fonte.
-  const chiave = `elenco2:${riquadro}`;
+  const chiave = `elenco3:${riquadro}`;
   const salvato = opzioni.ignoraCache ? null : await daCache(chiave, VALIDITA_ELENCO);
   if (salvato) {
     if (opzioni.onFonte) opzioni.onFonte("memoria");
@@ -166,7 +169,7 @@ function daOverpass(dati) {
       id: `osm_${rel.id}`,
       idOsm: rel.id,
       nome: tags.name || tags.ref || `Percorso OSM ${rel.id}`,
-      tipo: tags.route === "mtb" ? "MTB" : tags.route === "hiking" ? "Sentiero" : "Ciclabile",
+      tipo: tags.route === "mtb" ? "MTB" : tags.route === "bicycle" ? "Ciclabile" : "Sentiero",
       rete: (tags.network || "").toUpperCase(),
       fonte: "OpenStreetMap",
       url: `https://www.openstreetmap.org/relation/${rel.id}`,
