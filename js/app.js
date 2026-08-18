@@ -22,7 +22,7 @@ import { cercaPunti } from "./poi.js";
 import { testo as registroRete } from "./registro.js";
 import { mostraIntro, introGiaVista } from "./intro.js";
 
-export const APP_VERSION = "0.5.11-beta";
+export const APP_VERSION = "0.5.12-beta";
 
 // Numero del canale feedback beta. Pubblico nel sorgente: è una scelta consapevole.
 const REPORT_WA = "393484791772";
@@ -103,6 +103,10 @@ async function avvia() {
     // gliela si mostra un'altra volta, non davanti a quello che è venuto a vedere.
     if (!introGiaVista()) mostraIntro();
   }
+
+  // La cache di rete non deve crescere per sempre: si butta via quello che ha
+  // più di un mese. È l'ultima cosa dell'avvio, e se fallisce non importa.
+  db.potaCache(30 * 24 * 60 * 60 * 1000);
 }
 
 function apriCondiviso(condiviso) {
@@ -466,16 +470,28 @@ async function vaiA(luogo) {
 
 // ---------------------------------------------------------------- ricerca OSM
 
+// Premere «Cerca qui» due volte di seguito nello stesso punto vuol dire
+// "riprova davvero": la seconda volta si salta la memoria e si richiede a
+// OpenStreetMap. È il gesto che tutti fanno quando un risultato non convince.
+let ultimaRicerca = { dove: "", quando: 0 };
+
 async function cerca(lat, lon) {
   const raggio = parseInt(el("raggio").value, 10);
   const controllo = new AbortController();
 
+  const dove = `${lat.toFixed(3)},${lon.toFixed(3)},${raggio}`;
+  const insiste = ultimaRicerca.dove === dove && Date.now() - ultimaRicerca.quando < 60000;
+  ultimaRicerca = { dove, quando: Date.now() };
+
+  let daMemoria = false;
   lavoro(true, "Interrogo OpenStreetMap…", () => controllo.abort());
 
   try {
     const risultati = await cercaPercorsi(lat, lon, raggio, {
       segnale: controllo.signal,
       onStato: lavoroDice,
+      ignoraCache: insiste,
+      onFonte: (f) => { daMemoria = f === "memoria"; },
     });
     stato.risultatiOsm = risultati;
 
@@ -505,7 +521,10 @@ async function cerca(lat, lon) {
       ul.appendChild(li);
     }
 
-    avvisa(risultati.length === 1 ? "1 percorso trovato." : `${risultati.length} percorsi trovati.`);
+    const quanti = risultati.length === 1 ? "1 percorso trovato" : `${risultati.length} percorsi trovati`;
+    // Se la risposta arriva dalla memoria va detto: altrimenti un elenco
+    // vecchio di giorni sembra appena controllato.
+    avvisa(daMemoria ? `${quanti} (dalla memoria del telefono — ripremi «Cerca qui» per aggiornare).` : `${quanti}.`);
   } catch (e) {
     if (e.annullata) avvisa("Ricerca annullata.");
     else avvisa(e.message || "Ricerca non riuscita.", true);
@@ -905,6 +924,34 @@ async function caricaDemo() {
 
 // ---------------------------------------------------------------- report beta
 
+// ---------------------------------------------------------------- avvicinamento
+
+// Il percorso comincia da qualche parte, e quella qualche parte non è casa
+// tua: quasi sempre c'è un pezzo di strada da fare per arrivarci.
+//
+// Non lo navighiamo noi. Il telefono ha già un navigatore che conosce i sensi
+// unici, i cantieri e il traffico, e sa parlare mentre guidi: gli si passa il
+// punto di partenza e si toglie di mezzo. Rifarlo peggio non aiuterebbe
+// nessuno — e ricalcolare un percorso stradale richiederebbe un altro
+// servizio pubblico da interrogare, con le stesse code di Overpass.
+function portamiAllInizio() {
+  const percorso = stato.attivo;
+  if (!percorso || !percorso.punti || !percorso.punti.length) return;
+
+  const p = percorso.punti[0];
+  const meta = `${p.lat.toFixed(6)},${p.lon.toFixed(6)}`;
+
+  // Su iPhone si apre Mappe, che c'è sempre. Altrove Google Maps, che sa
+  // anche le ciclabili.
+  const suApple = /iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent);
+  const url = suApple
+    ? `https://maps.apple.com/?daddr=${meta}&dirflg=d`
+    : `https://www.google.com/maps/dir/?api=1&destination=${meta}&travelmode=bicycling`;
+
+  window.open(url, "_blank", "noopener");
+  avvisa("Ti porto all'inizio del percorso con le mappe del telefono.");
+}
+
 function apriReport() {
   const parti = [
     "Segnalazione SENTIERO",
@@ -935,6 +982,8 @@ function collegaEventi() {
   el("velo-annulla").addEventListener("click", () => {
     if (annullaLavoro) annullaLavoro();
   });
+
+  el("btn-avvicinamento").addEventListener("click", portamiAllInizio);
 
   el("btn-report").addEventListener("click", apriReport);
   el("btn-guida").addEventListener("click", mostraIntro);

@@ -3,6 +3,11 @@
 const NOME_DB = "sentiero";
 const STORE = "percorsi";
 
+// I contenitori che devono esistere. Aggiungerne uno qui basta: all'apertura
+// si controlla che ci siano tutti e, se ne manca uno, si sale di versione per
+// crearlo. Nessun numero da ricordare e da tenere allineato a mano.
+const RICHIESTI = [STORE, "cache"];
+
 let connessione = null;
 
 // Un errore gia' scritto per essere letto: si puo' mostrare cosi' com'e'.
@@ -26,6 +31,10 @@ function apriGrezzo(versione) {
       if (!db.objectStoreNames.contains(STORE)) {
         const store = db.createObjectStore(STORE, { keyPath: "id" });
         store.createIndex("data", "data");
+      }
+      // La cache delle risposte di rete: chiave libera, niente indici.
+      if (!db.objectStoreNames.contains("cache")) {
+        db.createObjectStore("cache", { keyPath: "chiave" });
       }
     };
 
@@ -70,7 +79,7 @@ async function apri() {
   // vuoto e senza contenitore, e da quel momento ogni lettura fallisce con
   // "object store was not found". Si sale di una versione per far scattare
   // di nuovo la creazione, che questa volta va a buon fine.
-  if (!db.objectStoreNames.contains(STORE)) {
+  if (!RICHIESTI.every((n) => db.objectStoreNames.contains(n))) {
     const prossima = db.version + 1;
     db.close();
     db = await apriGrezzo(prossima);
@@ -94,12 +103,12 @@ async function apri() {
   return connessione;
 }
 
-function transazione(modo, azione) {
+function transazione(modo, azione, contenitore = STORE) {
   return apri().then(
     (db) =>
       new Promise((risolvi, rifiuta) => {
-        const tx = db.transaction(STORE, modo);
-        const store = tx.objectStore(STORE);
+        const tx = db.transaction(contenitore, modo);
+        const store = tx.objectStore(contenitore);
         let risultato;
         try {
           risultato = azione(store);
@@ -147,4 +156,52 @@ export async function elimina(id) {
 export async function conta() {
   const risultato = await transazione("readonly", (store) => store.count());
   return risultato || 0;
+}
+
+// ---------------------------------------------------------------- cache di rete
+
+// Le risposte di OpenStreetMap si tengono da parte: i percorsi mappati non
+// cambiano da un'ora all'altra, e Overpass è un servizio pubblico in coda.
+// Chiedere due volte la stessa cosa fa perdere tempo a te e occupa una
+// macchina che serve a tutti.
+//
+// Non è persistenza di dati tuoi: è una copia di comodo. Se manca o è
+// scaduta, si richiede e basta — quindi ogni errore qui viene ingoiato,
+// perché una cache che si rompe non deve rompere l'app.
+
+export async function daCache(chiave, validaPerMs) {
+  try {
+    const voce = await transazione("readonly", (store) => store.get(chiave), "cache");
+    if (!voce) return null;
+    if (Date.now() - voce.quando > validaPerMs) return null;
+    return voce.valore;
+  } catch (e) {
+    return null;
+  }
+}
+
+export async function inCache(chiave, valore) {
+  try {
+    await transazione(
+      "readwrite",
+      (store) => store.put({ chiave, valore, quando: Date.now() }),
+      "cache"
+    );
+  } catch (e) {
+    /* senza cache si vive, più lentamente */
+  }
+}
+
+// Butta via le voci più vecchie di `etaMs`. Si chiama all'avvio: la cache non
+// deve crescere per sempre sul telefono di nessuno.
+export async function potaCache(etaMs) {
+  try {
+    const tutte = await transazione("readonly", (store) => store.getAll(), "cache");
+    const scadute = (tutte || []).filter((v) => Date.now() - v.quando > etaMs);
+    for (const v of scadute) {
+      await transazione("readwrite", (store) => store.delete(v.chiave), "cache");
+    }
+  } catch (e) {
+    /* pazienza */
+  }
 }

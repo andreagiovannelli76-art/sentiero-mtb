@@ -3,6 +3,7 @@
 
 import { haversine, lunghezza } from "./geo.js";
 import { chiediJson } from "./rete.js";
+import { daCache, inCache } from "./db.js";
 
 // Overpass è un servizio pubblico e gratuito, tenuto in piedi da volontari:
 // nelle ore di punta una richiesta può restare in coda per un minuto. Non è
@@ -24,6 +25,14 @@ const ANTICIPO = 5000;
 // Quanto si concede a un singolo mirror prima di considerarlo perso.
 const SCADENZA_OVERPASS = 45000;
 
+// Per quanto si tiene buona una risposta già avuta. I percorsi mappati su OSM
+// non cambiano da un'ora all'altra: una settimana per gli elenchi, un mese per
+// le tracce, che cambiano ancora meno. Il guadagno è enorme — la seconda
+// ricerca nella stessa zona è immediata — e il rischio è vedere per qualche
+// giorno un percorso aggiunto ieri.
+const VALIDITA_ELENCO = 7 * 24 * 60 * 60 * 1000;
+const VALIDITA_TRACCIA = 30 * 24 * 60 * 60 * 1000;
+
 // Tolleranza in metri per considerare due estremi di way come lo stesso punto.
 const TOLLERANZA_GIUNZIONE = 30;
 
@@ -41,7 +50,9 @@ const TOLLERANZA_GIUNZIONE = 30;
 
 // Cerca percorsi entro `raggio` metri da (lat, lon).
 // `opzioni.segnale` è un AbortSignal per annullare, `opzioni.onStato(testo)`
-// riceve i cambi di passo (il secondo mirror, un'attesa) da mostrare a schermo.
+// riceve i cambi di passo da mostrare a schermo, `opzioni.onFonte` dice se la
+// risposta viene dalla memoria del telefono o dalla rete, e
+// `opzioni.ignoraCache` la richiede comunque.
 // Ritorna un array di { id, idOsm, nome, tipo, rete }.
 export async function cercaPercorsi(lat, lon, raggio = 8000, opzioni = {}) {
   // Riquadro invece di (around:): Overpass indicizza i riquadri, mentre around
@@ -74,7 +85,15 @@ export async function cercaPercorsi(lat, lon, raggio = 8000, opzioni = {}) {
 );
 out tags;`;
 
-  const dati = await interroga(query, opzioni);
+  // La chiave è il riquadro stesso: cercare due volte dallo stesso punto con
+  // lo stesso raggio è la cosa più normale del mondo, e la seconda volta deve
+  // essere immediata.
+  const chiave = `elenco:${riquadro}`;
+  const salvato = opzioni.ignoraCache ? null : await daCache(chiave, VALIDITA_ELENCO);
+  if (opzioni.onFonte) opzioni.onFonte(salvato ? "memoria" : "rete");
+  const dati = salvato || (await interroga(query, opzioni));
+  if (!salvato) await inCache(chiave, dati);
+
   const elementi = (dati && dati.elements) || [];
 
   const percorsi = [];
@@ -116,7 +135,11 @@ relation(${Number(idOsm)})->.rotta;
 way(r.rotta);
 out tags;`;
 
-  const dati = await interroga(query, opzioni);
+  const chiave = `traccia:${Number(idOsm)}`;
+  const salvata = opzioni.ignoraCache ? null : await daCache(chiave, VALIDITA_TRACCIA);
+  const dati = salvata || (await interroga(query, opzioni));
+  if (!salvata) await inCache(chiave, dati);
+
   const elementi = (dati && dati.elements) || [];
 
   // Prima i tag delle way, poi la relazione che li userà.

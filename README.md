@@ -8,7 +8,7 @@ telefono o sul computer che stai usando. È una scelta di prodotto, non una funz
 
 Open source, licenza MIT. Di Andrea Giovannelli, Ascoli Piceno.
 
-Versione: **0.5.11 beta**.
+Versione: **0.5.12 beta**.
 
 ---
 
@@ -25,6 +25,8 @@ Versione: **0.5.11 beta**.
 - **Cerca un posto per nome** con Nominatim: scrivi "Amandola" e la mappa ci va
 - **Meteo in vetta**: tre giorni sul punto più alto del giro, non a valle
 - **Fontane e rifugi lungo il percorso**, presi da OpenStreetMap, con scritto dopo quanti chilometri li incontri
+- **Memoria delle ricerche**: una zona già cercata torna immediata, senza ridisturbare Overpass. Ripremi «Cerca qui» per aggiornarla davvero
+- **Portami all'inizio**: apre le mappe del telefono con le indicazioni fino al punto di partenza del giro
 - **Condivisione senza server**: il link contiene la traccia compressa nel frammento dell'URL
 - **Quattro sfondi mappa** (OpenTopoMap, OSM, satellite Esri, CyclOSM) e l'overlay Waymarked Trails MTB
 
