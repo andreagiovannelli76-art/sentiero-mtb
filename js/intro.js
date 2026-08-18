@@ -25,8 +25,9 @@ const PASSI = [
   {
     titolo: "Trovare un percorso",
     testo:
-      "In Cerca scrivi un posto — Amandola, Monte Vettore — e trovi i percorsi già mappati lì intorno, dal più vicino, con il fondo del sentiero." +
-      "\n\nAprendone uno vedi profilo, meteo in vetta e le fontane lungo la strada. Con Segui ti avviso se ti allontani dalla traccia.",
+      "In Cerca scrivi un posto — Amandola, Monte Vettore — e trovi i percorsi già mappati lì intorno, con il fondo del sentiero." +
+      "\n\nOppure tocca direttamente una linea colorata sulla mappa: ti dice quale percorso passa di lì." +
+      "\n\nAprendone uno vedi profilo, meteo in vetta e le fontane lungo la strada. Con Portami all'inizio ci arrivi, con Segui ti avviso se ti allontani dalla traccia.",
   },
 ];
 

@@ -3,7 +3,7 @@
 // ATTENZIONE alla procedura di release: a ogni pubblicazione va incrementato N in
 // "sentiero-vN", altrimenti i dispositivi continuano a servire la versione vecchia.
 
-const V = "sentiero-v23";
+const V = "sentiero-v24";
 
 const SHELL = [
   "./",

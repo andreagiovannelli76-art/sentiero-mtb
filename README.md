@@ -8,7 +8,7 @@ telefono o sul computer che stai usando. È una scelta di prodotto, non una funz
 
 Open source, licenza MIT. Di Andrea Giovannelli, Ascoli Piceno.
 
-Versione: **0.5.17 beta**.
+Versione: **0.5.18 beta**.
 
 ---
 
@@ -27,6 +27,7 @@ Versione: **0.5.17 beta**.
 - **Fontane e rifugi lungo il percorso**, presi da OpenStreetMap, con scritto dopo quanti chilometri li incontri
 - **Due fonti per l'elenco**: prima Waymarked Trails, che tiene un database dedicato ai soli percorsi segnati e ha la risposta già pronta; Overpass resta la riserva automatica se non risponde
 - **Memoria delle ricerche**: una zona già cercata torna immediata, senza ridisturbare Overpass. Ripremi «Cerca qui» per aggiornarla davvero
+- **Tocca la mappa**: tocchi una linea colorata e l'app ti dice quale percorso passa di lì, con tutte le sue caratteristiche
 - **Portami all'inizio**: apre le mappe del telefono con le indicazioni fino al punto di partenza del giro
 - **Condivisione senza server**: il link contiene la traccia compressa nel frammento dell'URL
 - **Quattro sfondi mappa** (OpenTopoMap, OSM, satellite Esri, CyclOSM) e l'overlay Waymarked Trails MTB

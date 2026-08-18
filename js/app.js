@@ -22,7 +22,7 @@ import { cercaPunti } from "./poi.js";
 import { testo as registroRete } from "./registro.js";
 import { mostraIntro, introGiaVista } from "./intro.js";
 
-export const APP_VERSION = "0.5.17-beta";
+export const APP_VERSION = "0.5.18-beta";
 
 // Numero del canale feedback beta. Pubblico nel sorgente: è una scelta consapevole.
 const REPORT_WA = "393484791772";
@@ -157,6 +157,8 @@ function preparaMappa() {
       { collapsed: true }
     )
     .addTo(mappa);
+
+  mappa.on("click", toccaMappa);
 
   // Il pannello cambia altezza: la mappa va avvisata o resta disegnata male.
   new ResizeObserver(() => mappa.invalidateSize()).observe(el("mappa"));
@@ -493,35 +495,8 @@ async function cerca(lat, lon) {
       ignoraCache: insiste,
       onFonte: (f) => { fonte = f; },
     });
-    stato.risultatiOsm = risultati;
-
-    el("osm-diagnostica").hidden = true;
-
-    const ul = el("lista-osm");
-    ul.innerHTML = "";
-    el("osm-vuota").hidden = risultati.length > 0;
-
-    if (!risultati.length) {
-      el("osm-vuota").textContent =
-        "Nessun percorso mappato qui. La copertura OSM è disomogenea: sui Sibillini è ottima, sulle colline picene molto meno.";
-      return;
-    }
-
-    for (const r of risultati) {
-      const li = document.createElement("li");
-      li.innerHTML = `
-        <div class="nome">
-          ${testoSicuro(r.nome)}
-          <div class="meta">
-            ${testoSicuro(r.tipo)}${r.rete ? " · " + testoSicuro(r.rete) : ""}
-            <br>tocca per vedere la traccia
-          </div>
-        </div>
-        <span class="pillola osm">OSM</span>
-      `;
-      li.addEventListener("click", () => apriRisultatoOsm(r));
-      ul.appendChild(li);
-    }
+    mostraRisultatiOsm(risultati);
+    if (!risultati.length) return;
 
     const quanti = risultati.length === 1 ? "1 percorso trovato" : `${risultati.length} percorsi trovati`;
     // Se la risposta arriva dalla memoria va detto: altrimenti un elenco
@@ -551,6 +526,91 @@ function mostraDiagnostica() {
   if (!righe) return;
   el("osm-registro").textContent = righe;
   el("osm-diagnostica").hidden = false;
+}
+
+// Riempie l'elenco dei risultati OSM. Serve alla ricerca per zona e al tocco
+// sulla mappa, che trovano le stesse cose e le mostrano allo stesso modo.
+function mostraRisultatiOsm(risultati, vuoto) {
+  stato.risultatiOsm = risultati;
+  el("osm-diagnostica").hidden = true;
+
+  const ul = el("lista-osm");
+  ul.innerHTML = "";
+  el("osm-vuota").hidden = risultati.length > 0;
+
+  if (!risultati.length) {
+    el("osm-vuota").textContent =
+      vuoto ||
+      "Nessun percorso mappato qui. La copertura OSM è disomogenea: sui Sibillini è ottima, sulle colline picene molto meno.";
+    return;
+  }
+
+  for (const r of risultati) {
+    const li = document.createElement("li");
+    li.innerHTML = `
+      <div class="nome">
+        ${testoSicuro(r.nome)}
+        <div class="meta">
+          ${testoSicuro(r.tipo)}${r.rete ? " · " + testoSicuro(r.rete) : ""}
+          <br>tocca per vedere la traccia
+        </div>
+      </div>
+      <span class="pillola osm">OSM</span>
+    `;
+    li.addEventListener("click", () => apriRisultatoOsm(r));
+    ul.appendChild(li);
+  }
+}
+
+// ---------------------------------------------------------------- tocco sulla mappa
+
+// Le linee colorate dei percorsi che si vedono sulla mappa sono immagini:
+// arrivano già disegnate dentro le piastrelle e non sanno di essere percorsi.
+// Toccarle non può quindi "selezionarle" — ma si può chiedere che cosa passa
+// nel punto toccato, ed è quello che uno si aspetta che succeda.
+//
+// Il raggio è stretto apposta: un dito su un telefono copre già una
+// cinquantina di metri di mappa alla scala a cui si guardano i sentieri, e
+// allargare vorrebbe dire tirare su mezza provincia a ogni tocco.
+const RAGGIO_TOCCO = 150;
+
+async function toccaMappa(e) {
+  // Durante una registrazione o mentre si segue un percorso la mappa serve a
+  // guardare dove sei: un tocco è quasi sempre una manovra, non una domanda.
+  if (stato.guida || (tracker && tracker.attivo)) return;
+
+  const { lat, lng } = e.latlng;
+  const controllo = new AbortController();
+  lavoro(true, "Guardo cosa passa di qui…", () => controllo.abort());
+
+  try {
+    const trovati = await cercaPercorsi(lat, lng, RAGGIO_TOCCO, {
+      segnale: controllo.signal,
+      onStato: lavoroDice,
+    });
+
+    if (!trovati.length) {
+      avvisa("Nessun percorso mappato in questo punto. Prova a toccare sulla linea colorata.");
+      return;
+    }
+
+    // Uno solo: è quello che volevi, si apre senza farti scegliere fra uno.
+    if (trovati.length === 1) {
+      lavoro(false);
+      await apriRisultatoOsm(trovati[0]);
+      return;
+    }
+
+    // Più di uno: qui passano due sentieri, e quale sia lo sai tu.
+    mostraRisultatiOsm(trovati);
+    mostraVista("cerca");
+    avvisa(`${trovati.length} percorsi passano di qui: scegli quale.`);
+  } catch (err) {
+    if (err.annullata) avvisa("Annullato.");
+    else avvisa(err.message || "Non riesco a guardare qui.", true);
+  } finally {
+    lavoro(false);
+  }
 }
 
 // La traccia si scarica adesso, per questo percorso soltanto. È la parte
