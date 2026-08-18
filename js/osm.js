@@ -22,7 +22,7 @@ const ENDPOINT = [
 const ANTICIPO = 5000;
 
 // Quanto si concede a un singolo mirror prima di considerarlo perso.
-const SCADENZA_OVERPASS = 30000;
+const SCADENZA_OVERPASS = 45000;
 
 // Tolleranza in metri per considerare due estremi di way come lo stesso punto.
 const TOLLERANZA_GIUNZIONE = 30;
@@ -42,7 +42,7 @@ const TOLLERANZA_GIUNZIONE = 30;
 // Cerca percorsi entro `raggio` metri da (lat, lon).
 // `opzioni.segnale` è un AbortSignal per annullare, `opzioni.onStato(testo)`
 // riceve i cambi di passo (il secondo mirror, un'attesa) da mostrare a schermo.
-// Ritorna un array di { id, idOsm, nome, tipo, rete, distanzaDaTe }.
+// Ritorna un array di { id, idOsm, nome, tipo, rete }.
 export async function cercaPercorsi(lat, lon, raggio = 8000, opzioni = {}) {
   // Riquadro invece di (around:): Overpass indicizza i riquadri, mentre around
   // deve calcolare la distanza relazione per relazione ed è molto più pesante.
@@ -58,15 +58,21 @@ export async function cercaPercorsi(lat, lon, raggio = 8000, opzioni = {}) {
     (lon + dLon).toFixed(5),
   ].join(",");
 
-  // "tags bb": i tag e il rettangolo di ingombro, niente membri e niente
-  // geometria. Il timeout è basso apposta — se questa non torna in venti
-  // secondi non tornerà, e tanto vale dirlo subito.
+  // "out tags" e basta: gli identificativi e i tag delle relazioni che
+  // l'indice spaziale ha già selezionato. Overpass non deve aprire niente.
+  //
+  // Si era provato "out tags bb", per avere anche il rettangolo di ingombro e
+  // ordinare per vicinanza. Sembra leggero perché torna pochi byte, ma per
+  // calcolare quel rettangolo Overpass deve risolvere tutti i membri della
+  // relazione e tutti i loro nodi: il lavoro del server è lo stesso della
+  // geometria completa. Si risparmiava traffico, non attesa — ed era l'attesa
+  // il problema.
   const query = `[out:json][timeout:25][bbox:${riquadro}];
 (
   relation["route"="mtb"];
   relation["route"="bicycle"]["network"~"lcn|rcn"];
 );
-out tags bb;`;
+out tags;`;
 
   const dati = await interroga(query, opzioni);
   const elementi = (dati && dati.elements) || [];
@@ -82,20 +88,16 @@ out tags bb;`;
       nome: tags.name || tags.ref || `Percorso OSM ${rel.id}`,
       tipo: tags.route === "mtb" ? "MTB" : "Ciclabile",
       rete: (tags.network || "").toUpperCase(),
-      // Quanto è lontano da dove hai cercato: il criterio con cui si ordina.
-      // Senza geometria si misura sul rettangolo di ingombro, che per un
-      // percorso locale è un'ottima approssimazione. Per una ciclovia che
-      // attraversa mezza Italia il rettangolo ti contiene e la distanza esce
-      // zero: è comunque vero che ti passa vicino, quindi va bene in cima.
-      distanzaDaTe: distanzaDalRiquadro(rel.bounds, lat, lon),
       fonte: "OpenStreetMap",
       url: `https://www.openstreetmap.org/relation/${rel.id}`,
     });
   }
 
-  // I più vicini in cima: da fermo davanti alla mappa interessa cosa hai
-  // sotto casa, non qual è il giro più corto della provincia.
-  return percorsi.sort((a, b) => a.distanzaDaTe - b.distanzaDaTe);
+  // Tutti i percorsi in elenco passano dentro il riquadro che hai cercato,
+  // quindi sono tutti "vicini": l'ordine alfabetico è il più utile per
+  // ritrovare un nome che conosci. La distanza esatta la sa solo la traccia,
+  // e arriva quando ne apri uno.
+  return percorsi.sort((a, b) => a.nome.localeCompare(b.nome, "it"));
 }
 
 // Secondo tempo: la traccia vera di una sola relazione.
@@ -144,17 +146,6 @@ out tags;`;
     fondo: fondoPrevalente(way, tagWay),
     frammentato,
   };
-}
-
-// Distanza dal punto al rettangolo di ingombro: zero se ci sei dentro,
-// altrimenti la distanza dal lato più vicino.
-function distanzaDalRiquadro(bounds, lat, lon) {
-  if (!bounds) return Infinity;
-  const vicino = {
-    lat: Math.min(Math.max(lat, bounds.minlat), bounds.maxlat),
-    lon: Math.min(Math.max(lon, bounds.minlon), bounds.maxlon),
-  };
-  return haversine({ lat, lon }, vicino);
 }
 
 // Come classifichiamo i valori di surface e tracktype di OSM.

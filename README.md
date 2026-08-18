@@ -8,7 +8,7 @@ telefono o sul computer che stai usando. È una scelta di prodotto, non una funz
 
 Open source, licenza MIT. Di Andrea Giovannelli, Ascoli Piceno.
 
-Versione: **0.5.10 beta**.
+Versione: **0.5.11 beta**.
 
 ---
 
@@ -20,7 +20,7 @@ Versione: **0.5.10 beta**.
 - **Statistiche**: distanza, D+ / D−, quota massima, pendenza massima, difficoltà, durata
 - **Profilo altimetrico** sincronizzato con la mappa: passi il dito sul profilo, il punto si accende sulla mappa
 - **Quote automatiche**: un percorso senza altitudini le chiede da solo all'apertura, da tre fonti gratuite in cascata (Open-Meteo, OpenTopoData, Open-Elevation)
-- **Percorsi già mappati**: cerca su OpenStreetMap le tracce `route=mtb` e le ciclabili locali e regionali, ordinate per quanto sono vicine. L'elenco arriva subito perché chiede solo i nomi; la traccia si scarica quando ne tocchi una, insieme al fondo del sentiero (sterrato, asfalto, roccioso)
+- **Percorsi già mappati**: cerca su OpenStreetMap le tracce `route=mtb` e le ciclabili locali e regionali, ordinate per nome. L'elenco arriva subito perché chiede solo i nomi; la traccia si scarica quando ne tocchi una, insieme a distanza, dislivello e fondo del sentiero (sterrato, asfalto, roccioso)
 - **Nessuna attesa senza fine**: ogni chiamata alla rete ha una scadenza sua e un pulsante «Annulla», perché in montagna il campo va e viene. Overpass viene interrogato su tre mirror in staffetta: se il primo è in coda, dopo cinque secondi se ne affianca un altro e vince chi risponde prima
 - **Cerca un posto per nome** con Nominatim: scrivi "Amandola" e la mappa ci va
 - **Meteo in vetta**: tre giorni sul punto più alto del giro, non a valle

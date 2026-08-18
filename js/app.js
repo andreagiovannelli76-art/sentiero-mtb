@@ -19,9 +19,10 @@ import { cercaPercorsi, caricaTraccia } from "./osm.js";
 import { cercaLuogo } from "./geocode.js";
 import { previsione, puntoPiuAlto } from "./weather.js";
 import { cercaPunti } from "./poi.js";
+import { testo as registroRete } from "./registro.js";
 import { mostraIntro, introGiaVista } from "./intro.js";
 
-export const APP_VERSION = "0.5.10-beta";
+export const APP_VERSION = "0.5.11-beta";
 
 // Numero del canale feedback beta. Pubblico nel sorgente: è una scelta consapevole.
 const REPORT_WA = "393484791772";
@@ -495,7 +496,7 @@ async function cerca(lat, lon) {
           ${testoSicuro(r.nome)}
           <div class="meta">
             ${testoSicuro(r.tipo)}${r.rete ? " · " + testoSicuro(r.rete) : ""}
-            <br>${quantoLontano(r.distanzaDaTe)} · tocca per la traccia
+            <br>tocca per vedere la traccia
           </div>
         </div>
         <span class="pillola osm">OSM</span>
@@ -511,13 +512,6 @@ async function cerca(lat, lon) {
   } finally {
     lavoro(false);
   }
-}
-
-// Senza geometria la distanza si misura sul rettangolo di ingombro: se ci sei
-// dentro viene zero, e "a 0 m da qui" non vuol dire niente.
-function quantoLontano(metri) {
-  if (!isFinite(metri)) return "in zona";
-  return metri < 200 ? "qui intorno" : `a ${formattaDistanza(metri)} da qui`;
 }
 
 // La traccia si scarica adesso, per questo percorso soltanto. È la parte
@@ -919,10 +913,14 @@ function apriReport() {
     `Schermo: ${window.innerWidth}×${window.innerHeight}`,
     `Contesto: ${stato.vista}${stato.attivo ? ` — «${stato.attivo.nome}»` : ""}`,
     `Percorsi salvati: ${stato.percorsi.length}`,
-    "",
-    "Cosa è successo:",
-    "",
   ];
+
+  // Le ultime chiamate alla rete: sono la differenza fra "non funziona" e
+  // sapere quale server ha taciuto e per quanto.
+  const rete = registroRete();
+  if (rete) parti.push("", "Ultime chiamate:", rete);
+
+  parti.push("", "Cosa è successo:", "");
   const url = `https://wa.me/${REPORT_WA}?text=${encodeURIComponent(parti.join("\n"))}`;
   window.open(url, "_blank", "noopener");
 }

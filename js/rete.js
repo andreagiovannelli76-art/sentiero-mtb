@@ -14,6 +14,8 @@
 // una risposta che si interrompe a metà è appesa esattamente come una che non
 // comincia.
 
+import { annota } from "./registro.js";
+
 // Trenta secondi sono già oltre la soglia in cui chiunque riproverebbe.
 export const SCADENZA = 25000;
 
@@ -36,15 +38,31 @@ export async function chiediJson(url, opzioni = {}) {
     else segnale.addEventListener("abort", inoltra);
   }
 
+  const partenza = Date.now();
+  const segna = (esito) => annota(url, esito, Date.now() - partenza);
+
   try {
     const risposta = await fetch(url, { ...richiesta, signal: controllo.signal });
-    if (!risposta.ok) return { ok: false, stato: risposta.status };
-    return { ok: true, stato: risposta.status, dati: await risposta.json() };
+    if (!risposta.ok) {
+      segna(`HTTP ${risposta.status}`);
+      return { ok: false, stato: risposta.status };
+    }
+    const dati = await risposta.json();
+    segna("ok");
+    return { ok: true, stato: risposta.status, dati };
   } catch (e) {
     // L'annullamento voluto viene prima: anche quando scattano insieme, è
     // quello che l'utente riconosce.
-    if (segnale && segnale.aborted) throw annullata();
-    if (controllo.signal.aborted) throw scaduta(scadenza);
+    if (segnale && segnale.aborted) {
+      segna("fermato");
+      throw annullata();
+    }
+    if (controllo.signal.aborted) {
+      segna("scaduto");
+      throw scaduta(scadenza);
+    }
+    // Rete assente, DNS, CORS: il browser non dice quale, ma dice quando.
+    segna(`errore: ${e.name || "rete"}`);
     throw e;
   } finally {
     clearTimeout(timer);
