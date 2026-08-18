@@ -22,7 +22,7 @@ import { cercaPunti } from "./poi.js";
 import { testo as registroRete } from "./registro.js";
 import { mostraIntro, introGiaVista } from "./intro.js";
 
-export const APP_VERSION = "0.5.15-beta";
+export const APP_VERSION = "0.5.16-beta";
 
 // Numero del canale feedback beta. Pubblico nel sorgente: è una scelta consapevole.
 const REPORT_WA = "393484791772";
@@ -944,6 +944,35 @@ async function caricaDemo() {
 
 // ---------------------------------------------------------------- report beta
 
+// ---------------------------------------------------------------- fuori dall'app
+
+// Aprire qualcosa che sta fuori — le mappe del telefono, WhatsApp — non è
+// scontato come sembra.
+//
+// Quando SENTIERO gira nel browser, window.open apre una scheda e va bene.
+// Quando invece è stato installato da icona, iOS lo esegue in un contenitore
+// senza barra e senza schede: lì window.open non ha una finestra dove
+// aprire, e spesso non fa assolutamente niente. Nessun errore, nessuna
+// scheda: il pulsante sembra rotto.
+//
+// In quel caso si cambia indirizzo alla pagina stessa. iOS riconosce che
+// l'indirizzo appartiene a un'altra app, la apre, e SENTIERO resta dov'era —
+// tornando indietro lo si ritrova al suo posto.
+function apriFuori(url) {
+  const daIcona =
+    navigator.standalone === true ||
+    (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches);
+
+  if (daIcona) {
+    window.location.href = url;
+    return;
+  }
+
+  const finestra = window.open(url, "_blank", "noopener");
+  // Anche nel browser può capitare che il blocco pop-up dica di no.
+  if (!finestra) window.location.href = url;
+}
+
 // ---------------------------------------------------------------- avvicinamento
 
 // Il percorso comincia da qualche parte, e quella qualche parte non è casa
@@ -968,8 +997,8 @@ function portamiAllInizio() {
     ? `https://maps.apple.com/?daddr=${meta}&dirflg=d`
     : `https://www.google.com/maps/dir/?api=1&destination=${meta}&travelmode=bicycling`;
 
-  window.open(url, "_blank", "noopener");
   avvisa("Ti porto all'inizio del percorso con le mappe del telefono.");
+  apriFuori(url);
 }
 
 function apriReport() {
@@ -989,7 +1018,7 @@ function apriReport() {
 
   parti.push("", "Cosa è successo:", "");
   const url = `https://wa.me/${REPORT_WA}?text=${encodeURIComponent(parti.join("\n"))}`;
-  window.open(url, "_blank", "noopener");
+  apriFuori(url);
 }
 
 // ---------------------------------------------------------------- eventi
