@@ -24,7 +24,7 @@
     <img src="icons/icon.svg" alt="" width="30" height="30">
     <div>
       <h1>SENTIERO</h1>
-      <p class="sottotitolo">Percorsi MTB · open source · v0.5.3 beta</p>
+      <p class="sottotitolo">Percorsi MTB · open source · v0.5.4 beta</p>
     </div>
   </div>
   <button id="btn-report" class="icona" title="Segnala un problema su WhatsApp" aria-label="Segnala un problema">⚑</button>
@@ -90,6 +90,13 @@
       <p class="nota">
         Cerca le tracce MTB e le ciclabili censite su OpenStreetMap nella zona inquadrata dalla mappa.
       </p>
+
+      <div class="riga-form">
+        <input type="search" id="luogo" class="campo" placeholder="Vai a un posto: Amandola, Monte Vettore…"
+               autocomplete="off" enterkeyhint="search" aria-label="Cerca un luogo">
+        <button class="btn" id="btn-vai">Vai</button>
+      </div>
+      <ul class="lista" id="lista-luoghi" hidden></ul>
 
       <div class="riga-form">
         <label for="raggio">Raggio</label>

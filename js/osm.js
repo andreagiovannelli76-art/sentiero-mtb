@@ -32,23 +32,35 @@ export async function cercaPercorsi(lat, lon, raggio = 8000) {
   // "body" e non "tags": tags stampa id e tag ma OMETTE i membri della
   // relazione, e senza membri non arriva nessuna geometria da cui ricavare
   // la traccia. È il motivo per cui la v0.4 non trovava mai niente.
+  // Le way servono due volte: con la geometria dentro le relazioni, per la
+  // traccia, e con i soli tag, per sapere che fondo hanno. I tag costano
+  // pochissimo rispetto alla geometria, che infatti non si richiede due volte.
   const query = `[out:json][timeout:60][bbox:${riquadro}];
 (
   relation["route"="mtb"];
   relation["route"="bicycle"]["network"~"lcn|rcn"];
-);
-out body geom;`;
+)->.rotte;
+.rotte out body geom;
+way(r.rotte);
+out tags;`;
 
   const dati = await interroga(query);
   const elementi = (dati && dati.elements) || [];
+
+  // Prima i tag delle way, poi le relazioni che li useranno.
+  const tagWay = new Map();
+  for (const el of elementi) {
+    if (el.type === "way" && el.tags) tagWay.set(el.id, el.tags);
+  }
 
   const percorsi = [];
   for (const rel of elementi) {
     if (rel.type !== "relation") continue;
 
-    const segmenti = (rel.members || [])
-      .filter((m) => m.type === "way" && Array.isArray(m.geometry) && m.geometry.length > 1)
-      .map((m) => m.geometry.map((g) => ({ lat: g.lat, lon: g.lon })));
+    const way = (rel.members || []).filter(
+      (m) => m.type === "way" && Array.isArray(m.geometry) && m.geometry.length > 1
+    );
+    const segmenti = way.map((m) => m.geometry.map((g) => ({ lat: g.lat, lon: g.lon })));
 
     if (!segmenti.length) continue;
 
@@ -63,14 +75,75 @@ out body geom;`;
       rete: (tags.network || "").toUpperCase(),
       punti,
       distanza: lunghezza(punti),
+      // Quanto è lontano da dove hai cercato: il criterio con cui si ordina.
+      distanzaDaTe: distanzaMinima(punti, lat, lon),
+      fondo: fondoPrevalente(way, tagWay),
       frammentato,
       fonte: "OpenStreetMap",
       url: `https://www.openstreetmap.org/relation/${rel.id}`,
     });
   }
 
-  // I giri più corti in cima: sono quelli percorribili in giornata.
-  return percorsi.sort((a, b) => a.distanza - b.distanza);
+  // I più vicini in cima: da fermo davanti alla mappa interessa cosa hai
+  // sotto casa, non qual è il giro più corto della provincia.
+  return percorsi.sort((a, b) => a.distanzaDaTe - b.distanzaDaTe);
+}
+
+// Distanza dal punto cercato al punto più vicino del percorso. Si campiona:
+// su una traccia di migliaia di punti la precisione al metro non serve a
+// nessuno, e moltiplicata per tutti i risultati costerebbe.
+function distanzaMinima(punti, lat, lon) {
+  const centro = { lat, lon };
+  const passo = Math.max(1, Math.floor(punti.length / 200));
+  let minimo = Infinity;
+  for (let i = 0; i < punti.length; i += passo) {
+    const d = haversine(centro, punti[i]);
+    if (d < minimo) minimo = d;
+  }
+  return minimo;
+}
+
+// Come classifichiamo i valori di surface e tracktype di OSM.
+const FONDI = {
+  asfalto: ["asphalt", "paved", "concrete", "paving_stones"],
+  sterrato: ["unpaved", "gravel", "fine_gravel", "compacted", "dirt", "ground", "earth", "sand", "grass"],
+  roccioso: ["rock", "stone", "pebblestone", "cobblestone"],
+};
+
+// Il fondo prevalente, pesato sulla lunghezza dei tratti: un chilometro di
+// asfalto conta più di cento metri, anche se sono due way entrambe.
+// Le way senza tag non votano: meglio non dire niente che tirare a indovinare.
+function fondoPrevalente(way, tagWay) {
+  const peso = { asfalto: 0, sterrato: 0, roccioso: 0 };
+  let conosciuto = 0;
+  let totale = 0;
+
+  for (const m of way) {
+    const punti = m.geometry.map((g) => ({ lat: g.lat, lon: g.lon }));
+    const metri = lunghezza(punti);
+    totale += metri;
+
+    const tags = tagWay.get(m.ref) || {};
+    const superficie = tags.surface || "";
+    let categoria = Object.keys(FONDI).find((k) => FONDI[k].includes(superficie));
+
+    // Senza surface, tracktype dice comunque quanto è battuta una sterrata.
+    if (!categoria && tags.tracktype) {
+      categoria = tags.tracktype === "grade1" ? "asfalto" : "sterrato";
+    }
+
+    if (categoria) {
+      peso[categoria] += metri;
+      conosciuto += metri;
+    }
+  }
+
+  // Sotto un terzo di percorso classificato il dato non è affidabile.
+  if (!totale || conosciuto < totale / 3) return null;
+
+  const ordinati = Object.entries(peso).sort((a, b) => b[1] - a[1]);
+  const [primo, valore] = ordinati[0];
+  return valore > conosciuto * 0.7 ? primo : "misto";
 }
 
 const attesa = (ms) => new Promise((r) => setTimeout(r, ms));

@@ -27,6 +27,8 @@ Obiettivo di business a medio termine: community di percorsi + guide a pagamento
 - Dati esterni: Overpass API (percorsi OSM) · quote da tre fonti gratuite in cascata:
   Open-Meteo (Copernicus 90 m, la più stabile), OpenTopoData (EU-DEM 25 m, la più precisa
   sull'Appennino ma 1 chiamata/s e 1000/giorno), Open-Elevation (ultima rete)
+- Nominatim per la ricerca dei luoghi: gratuito, senza chiave, ma è offerto per cortesia —
+  la sua politica d'uso vieta di interrogarlo a ogni tasto premuto, quindi si cerca solo su invio
 - Hosting: Vercel, sito statico · Analytics: `/_vercel/insights/script.js` già in `index.html`
 - Palette: pine `#1B2620` · moss `#3F5B37` · dust `#C88B3C` · chalk `#EFEADF`
 
@@ -45,6 +47,7 @@ js/share.js           traccia compressa in URL (#r=...)
 js/elevation.js       Open-Elevation
 js/osm.js             Overpass: relation route=mtb / route=bicycle (lcn/rcn), chaining way
 js/follow.js          guida su percorso: scarto dalla traccia, rimanente, salita residua
+js/geocode.js         Nominatim: ricerca di un luogo per nome (max 1 richiesta/s)
 sw.js                 service worker (cache shell)
 manifest.webmanifest  PWA
 icons/                icon-192, icon-512, icon.svg (sorgente)
@@ -128,7 +131,8 @@ Principio: **prima i percorsi esistenti (OSM), poi la community, poi il premium.
 |---|---|---|
 | 0.4 ✅ | Percorsi pubblici OSM (Overpass + overlay Waymarked Trails) | pronta |
 | 0.5 ✅ | **Segui percorso** (scarto dalla traccia, quanto manca, salita residua) · fix dai feedback: ricerca OSM che non trovava nulla, dislivello dichiarato zero sui percorsi senza quote, query Overpass più leggera | rilasciata |
-| 0.5.x | Guida primo avvio (3 schermate) · "percorsi vicino a me" ordinati per distanza GPS | erano previsti in 0.5, non ci sono entrati |
+| 0.5.4 ✅ | Ricerca di un luogo per nome · risultati OSM ordinati per vicinanza · fondo del sentiero da surface/tracktype | rilasciata |
+| 0.5.x | Guida primo avvio (3 schermate) | era prevista in 0.5, non ci è entrata |
 | 0.6 | Backend Supabase: auth, libreria pubblica condivisa, "rendi pubblico" un giro, foto, autore, like/commenti | trasforma il tool in community |
 | 0.7 | Schede guida: descrizione tecnica, POI (fontane, rifugi, punti pericolosi), stagionalità | base per le guide |
 | 0.8 | Guide premium: flag `premium`, Stripe, accesso a pagamento · tile offline per zona | monetizzazione |

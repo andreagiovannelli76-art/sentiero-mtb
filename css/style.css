@@ -330,6 +330,17 @@ main {
   margin: 10px 0;
 }
 .riga-form label { font-size: 12px; color: var(--testo-tenue); }
+.riga-form .campo {
+  flex: 1 1 160px;
+  min-width: 0;
+  font: inherit;
+  font-size: 14px;
+  padding: 9px 11px;
+  border-radius: var(--raggio);
+  border: 1px solid var(--bordo);
+  background: var(--carta);
+  color: var(--testo);
+}
 .riga-form select {
   font: inherit;
   font-size: 13px;

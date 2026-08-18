@@ -16,8 +16,9 @@ import { Guida } from "./follow.js";
 import { creaLink, leggiLink, LIMITE_URL } from "./share.js";
 import { correggiQuote } from "./elevation.js";
 import { cercaPercorsi } from "./osm.js";
+import { cercaLuogo } from "./geocode.js";
 
-export const APP_VERSION = "0.5.3-beta";
+export const APP_VERSION = "0.5.4-beta";
 
 // Numero del canale feedback beta. Pubblico nel sorgente: è una scelta consapevole.
 const REPORT_WA = "393484791772";
@@ -387,6 +388,51 @@ async function fermaRegistrazione() {
   avvisa("Giro salvato. Se il D+ è basso, prova «Correggi quote».");
 }
 
+// ---------------------------------------------------------------- ricerca dei luoghi
+
+async function cercaLuoghi() {
+  const testo = el("luogo").value;
+  if (!testo.trim()) return;
+
+  lavoro(true, "Cerco il luogo…");
+  try {
+    const luoghi = await cercaLuogo(testo);
+    const ul = el("lista-luoghi");
+    ul.innerHTML = "";
+    ul.hidden = !luoghi.length;
+
+    if (!luoghi.length) {
+      avvisa("Nessun luogo con questo nome.", true);
+      return;
+    }
+
+    for (const l of luoghi) {
+      const li = document.createElement("li");
+      li.innerHTML = `
+        <div class="nome">
+          ${testoSicuro(l.breve)}
+          ${l.tipo ? `<div class="meta">${testoSicuro(l.tipo)}</div>` : ""}
+        </div>
+      `;
+      li.addEventListener("click", () => vaiA(l));
+      ul.appendChild(li);
+    }
+  } catch (e) {
+    avvisa(e.message, true);
+  } finally {
+    lavoro(false);
+  }
+}
+
+// Scelto il luogo, ci si sposta e si cerca subito: è quello che si voleva
+// fare scrivendone il nome.
+async function vaiA(luogo) {
+  el("lista-luoghi").hidden = true;
+  el("luogo").blur();
+  mappa.setView([luogo.lat, luogo.lon], 13);
+  await cerca(luogo.lat, luogo.lon);
+}
+
 // ---------------------------------------------------------------- ricerca OSM
 
 async function cerca(lat, lon) {
@@ -413,7 +459,8 @@ async function cerca(lat, lon) {
         <div class="nome">
           ${testoSicuro(r.nome)}
           <div class="meta">
-            ${formattaDistanza(r.distanza)} · ${testoSicuro(r.tipo)}${r.rete ? " · " + testoSicuro(r.rete) : ""}${r.frammentato ? " · traccia incompleta su OSM" : ""}
+            ${formattaDistanza(r.distanza)} · ${testoSicuro(r.tipo)}${r.fondo ? " · " + testoSicuro(r.fondo) : ""}${r.rete ? " · " + testoSicuro(r.rete) : ""}
+            <br>a ${formattaDistanza(r.distanzaDaTe)} da qui${r.frammentato ? " · traccia incompleta su OSM" : ""}
           </div>
         </div>
         <span class="pillola osm">OSM</span>
@@ -757,6 +804,14 @@ function collegaEventi() {
     } else {
       tracker.pausa();
       el("btn-pausa").textContent = "Riprendi";
+    }
+  });
+
+  el("btn-vai").addEventListener("click", cercaLuoghi);
+  el("luogo").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      cercaLuoghi();
     }
   });
 
