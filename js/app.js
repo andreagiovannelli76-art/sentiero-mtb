@@ -17,8 +17,10 @@ import { creaLink, leggiLink, LIMITE_URL } from "./share.js";
 import { correggiQuote } from "./elevation.js";
 import { cercaPercorsi } from "./osm.js";
 import { cercaLuogo } from "./geocode.js";
+import { previsione, puntoPiuAlto } from "./weather.js";
+import { cercaPunti } from "./poi.js";
 
-export const APP_VERSION = "0.5.4-beta";
+export const APP_VERSION = "0.5.5-beta";
 
 // Numero del canale feedback beta. Pubblico nel sorgente: è una scelta consapevole.
 const REPORT_WA = "393484791772";
@@ -267,6 +269,9 @@ function apriPercorso(percorso, salvato) {
   // per avere dislivello e profilo, quindi si fa da soli invece di aspettare
   // che l'utente scopra il pulsante giusto.
   if (!s.haQuote) chiediQuote(percorso);
+
+  el("appoggi").hidden = true;
+  mostraMeteo(percorso);
 }
 
 function rinfrescaStatistiche() {
@@ -477,6 +482,86 @@ async function cerca(lat, lon) {
   }
 }
 
+// ---------------------------------------------------------------- meteo e appoggi
+
+// Il meteo si chiede da solo: e' una chiamata sola a un servizio affidabile,
+// e in montagna e' l'informazione che decide se parti.
+async function mostraMeteo(percorso) {
+  const cima = puntoPiuAlto(percorso.punti);
+  el("meteo").hidden = true;
+  if (!cima) return;
+
+  try {
+    const giorni = await previsione(cima.lat, cima.lon);
+    if (stato.attivo !== percorso) return;
+
+    el("meteo-quota").textContent = `· ${Math.round(cima.ele)} m`;
+    el("meteo-giorni").innerHTML = giorni
+      .map((g) => {
+        // Sopra i 2 mm di pioggia o i 35 km/h di vento la giornata cambia.
+        const brutto = (g.pioggia || 0) >= 2 || (g.vento || 0) >= 35;
+        return `<div class="meteo-giorno${brutto ? " brutto" : ""}">
+          <span class="quando">${testoSicuro(g.giorno)}</span>
+          <span class="gradi">${g.tMin ?? "—"}° / ${g.tMax ?? "—"}°</span>
+          ${testoSicuro(g.cielo)}<br>
+          ${g.pioggia ? `${g.pioggia} mm · ` : ""}${g.vento ?? "—"} km/h
+        </div>`;
+      })
+      .join("");
+    el("meteo").hidden = false;
+  } catch (e) {
+    // Il meteo e' un di piu': se non arriva, il percorso resta utilizzabile.
+    console.warn("Meteo non disponibile:", e.message);
+  }
+}
+
+// I punti d'appoggio invece si chiedono solo su richiesta: e' una query a
+// Overpass, che e' il servizio piu' fragile fra quelli che usiamo.
+async function mostraAppoggi() {
+  if (!stato.attivo) return;
+  const percorso = stato.attivo;
+
+  lavoro(true, "Cerco fontane e ricoveri…");
+  try {
+    const punti = await cercaPunti(percorso.punti);
+    if (stato.attivo !== percorso) return;
+
+    const ul = el("lista-appoggi");
+    ul.innerHTML = "";
+    el("appoggi").hidden = false;
+    el("appoggi-vuoto").hidden = punti.length > 0;
+
+    for (const p of punti) {
+      // Senza nome si usa il tipo come titolo, e allora non lo si ripete sotto.
+      const titolo = p.nome || maiuscola(p.tipo);
+      const sotto = [
+        p.nome ? p.tipo : null,
+        `dopo ${formattaDistanza(p.dopo)}`,
+        p.scarto > 20 ? `${p.scarto} m fuori traccia` : null,
+      ].filter(Boolean).join(" · ");
+
+      const li = document.createElement("li");
+      li.innerHTML = `
+        <div class="nome">
+          ${testoSicuro(titolo)}
+          <div class="meta">${testoSicuro(sotto)}</div>
+        </div>
+      `;
+      li.addEventListener("click", () => {
+        mappa.setView([p.lat, p.lon], 16);
+        mostraVista("mappa");
+      });
+      ul.appendChild(li);
+    }
+
+    avvisa(punti.length ? `${punti.length === 1 ? "1 punto trovato" : punti.length + " punti trovati"} lungo il percorso.` : "Nessuna fontana o ricovero mappato qui.");
+  } catch (e) {
+    avvisa(e.message, true);
+  } finally {
+    lavoro(false);
+  }
+}
+
 // ---------------------------------------------------------------- quote
 
 // Chiede le quote e aggiorna la scheda quando arrivano. Non blocca niente:
@@ -502,6 +587,7 @@ async function chiediQuote(percorso, forzato = false) {
 
     rinfrescaStatistiche();
     profilo.imposta(stato.attivo.punti);
+    mostraMeteo(stato.attivo);
     avvisa("Quote aggiunte dal modello del terreno.");
   } catch (e) {
     if (stato.attivo !== percorso) return;
@@ -840,6 +926,7 @@ function collegaEventi() {
   el("btn-quote").addEventListener("click", correggiQuoteAttivo);
   el("btn-condividi").addEventListener("click", condividiAttivo);
   el("btn-esporta").addEventListener("click", esportaAttivo);
+  el("btn-appoggi").addEventListener("click", mostraAppoggi);
   el("btn-rinomina").addEventListener("click", rinominaAttivo);
   el("btn-elimina").addEventListener("click", eliminaAttivo);
 
@@ -888,6 +975,10 @@ function avvisa(messaggio, errore = false) {
 function lavoro(attivo, testo = "Un attimo…") {
   el("velo-testo").textContent = testo;
   el("velo").hidden = !attivo;
+}
+
+function maiuscola(s) {
+  return s ? s[0].toUpperCase() + s.slice(1) : s;
 }
 
 function testoSicuro(s) {

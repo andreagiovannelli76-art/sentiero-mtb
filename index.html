@@ -24,7 +24,7 @@
     <img src="icons/icon.svg" alt="" width="30" height="30">
     <div>
       <h1>SENTIERO</h1>
-      <p class="sottotitolo">Percorsi MTB · open source · v0.5.4 beta</p>
+      <p class="sottotitolo">Percorsi MTB · open source · v0.5.5 beta</p>
     </div>
   </div>
   <button id="btn-report" class="icona" title="Segnala un problema su WhatsApp" aria-label="Segnala un problema">⚑</button>
@@ -125,12 +125,24 @@
 
       <canvas id="profilo" class="profilo" height="130" aria-label="Profilo altimetrico"></canvas>
 
+      <div id="meteo" class="blocco" hidden>
+        <h3>Meteo in vetta <span id="meteo-quota" class="tenue"></span></h3>
+        <div id="meteo-giorni" class="meteo-giorni"></div>
+      </div>
+
+      <div id="appoggi" class="blocco" hidden>
+        <h3>Lungo il percorso</h3>
+        <ul class="lista compatta" id="lista-appoggi"></ul>
+        <p class="nota" id="appoggi-vuoto" hidden>Nessuna fontana o ricovero mappato lungo questa traccia.</p>
+      </div>
+
       <div class="azioni azioni-dettaglio">
         <button class="btn primario" id="btn-segui">Segui</button>
         <button class="btn primario" id="btn-salva" hidden>Salva nella libreria</button>
         <button class="btn" id="btn-quote">Correggi quote</button>
         <button class="btn" id="btn-condividi">Condividi link</button>
         <button class="btn" id="btn-esporta">Esporta GPX</button>
+        <button class="btn" id="btn-appoggi">Fontane e rifugi</button>
         <button class="btn" id="btn-rinomina">Rinomina</button>
         <button class="btn pericolo fantasma" id="btn-elimina">Elimina</button>
       </div>

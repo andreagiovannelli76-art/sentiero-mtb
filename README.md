@@ -8,7 +8,7 @@ telefono o sul computer che stai usando. È una scelta di prodotto, non una funz
 
 Open source, licenza MIT. Di Andrea Giovannelli, Ascoli Piceno.
 
-Versione: **0.5.4 beta**.
+Versione: **0.5.5 beta**.
 
 ---
 
@@ -22,6 +22,8 @@ Versione: **0.5.4 beta**.
 - **Quote automatiche**: un percorso senza altitudini le chiede da solo all'apertura, da tre fonti gratuite in cascata (Open-Meteo, OpenTopoData, Open-Elevation)
 - **Percorsi già mappati**: cerca su OpenStreetMap le tracce `route=mtb` e le ciclabili locali e regionali, ordinati per quanto sono vicini, con il fondo del sentiero (sterrato, asfalto, roccioso)
 - **Cerca un posto per nome** con Nominatim: scrivi "Amandola" e la mappa ci va
+- **Meteo in vetta**: tre giorni sul punto più alto del giro, non a valle
+- **Fontane e rifugi lungo il percorso**, presi da OpenStreetMap, con scritto dopo quanti chilometri li incontri
 - **Condivisione senza server**: il link contiene la traccia compressa nel frammento dell'URL
 - **Quattro sfondi mappa** (OpenTopoMap, OSM, satellite Esri, CyclOSM) e l'overlay Waymarked Trails MTB
 
@@ -53,6 +55,8 @@ js/elevation.js       Open-Elevation
 js/osm.js             Overpass: relation route=mtb / route=bicycle, concatenazione delle way
 js/follow.js          guida lungo un percorso: scarto dalla traccia, quanto manca, quanto sali
 js/geocode.js         Nominatim: trovare un posto per nome
+js/weather.js         Open-Meteo: previsioni sul punto più alto del percorso
+js/poi.js             Overpass: acqua e ricoveri lungo la traccia
 sw.js                 service worker (cache del guscio)
 manifest.webmanifest  PWA
 icons/                icon-192, icon-512, icon.svg (sorgente delle altre due)
