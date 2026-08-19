@@ -306,10 +306,17 @@ export async function caricaTraccia(idOsm, opzioni = {}) {
   }
 
   // Riserva: Overpass, che in cambio della lentezza ci dice anche il fondo.
+  //
+  // I giri lunghi su OSM sono spesso "super-percorsi": relazioni che
+  // contengono altre relazioni — le tappe — e nessuna way diretta. Leggere
+  // solo il primo livello trova il contenitore e dentro non vede niente:
+  // "traccia non utilizzabile" su un percorso che esiste eccome. Si scende
+  // quindi di un livello: la relazione chiesta piu' le sue eventuali figlie.
   const query = `[out:json][timeout:60];
-relation(${Number(idOsm)})->.rotta;
-.rotta out body geom;
-way(r.rotta);
+relation(${Number(idOsm)})->.radice;
+(.radice; relation(r.radice);)->.rotte;
+.rotte out body geom;
+way(r.rotte);
 out tags;`;
 
   const dati = await interroga(query, opzioni);
@@ -328,10 +335,17 @@ function traccaDaOverpass(dati) {
     if (el.type === "way" && el.tags) tagWay.set(el.id, el.tags);
   }
 
-  const rel = elementi.find((e) => e.type === "relation");
-  const way = ((rel && rel.members) || []).filter(
-    (m) => m.type === "way" && Array.isArray(m.geometry) && m.geometry.length > 1
-  );
+  // Le way si raccolgono da TUTTE le relazioni della risposta: in un
+  // super-percorso la radice non ne ha, le tappe si'.
+  const way = [];
+  for (const rel of elementi) {
+    if (rel.type !== "relation") continue;
+    for (const m of rel.members || []) {
+      if (m.type === "way" && Array.isArray(m.geometry) && m.geometry.length > 1) {
+        way.push(m);
+      }
+    }
+  }
   const segmenti = way.map((m) => m.geometry.map((g) => ({ lat: g.lat, lon: g.lon })));
 
   return costruisci(segmenti, fondoPrevalente(way, tagWay));

@@ -155,6 +155,7 @@ Principio: **prima i percorsi esistenti (OSM), poi la community, poi il premium.
 | 0.5.22 ✅ | Traccia dalla geometria precalcolata di Waymarked Trails, Overpass di riserva (che in cambio dà il fondo) | rilasciata: i cammini enormi non muoiono più di timeout |
 | 0.5.23 ✅ | Tocco sulla mappa: risposta immediata anche quando è «niente» · «Portami all'inizio» punta al punto più vicino se l'inizio è lontano | rilasciata |
 | 0.5.24 ✅ | Tocco sulla mappa: domanda precisa a Overpass (way→rel, leggera) e domanda larga all'archivio veloce, in parallelo — il vuoto dell'archivio sui riquadri piccoli era falso | rilasciata |
+| 0.5.25 ✅ | Super-percorsi (relazioni di relazioni) caricabili · referto tecnico anche sui caricamenti falliti | rilasciata |
 | 0.6 | Backend Supabase: auth, libreria pubblica condivisa, "rendi pubblico" un giro, foto, autore, like/commenti | trasforma il tool in community |
 | 0.7 | Schede guida: descrizione tecnica, stagionalità · punti pericolosi | i POI acqua/rifugi sono già arrivati in 0.5.5 |
 | 0.8 | Guide premium: flag `premium`, Stripe, accesso a pagamento · tile offline per zona | monetizzazione |

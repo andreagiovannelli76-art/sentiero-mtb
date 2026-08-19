@@ -22,7 +22,7 @@ import { cercaPunti } from "./poi.js";
 import { testo as registroRete } from "./registro.js";
 import { mostraIntro, introGiaVista } from "./intro.js";
 
-export const APP_VERSION = "0.5.24-beta";
+export const APP_VERSION = "0.5.25-beta";
 
 // Numero del canale feedback beta. Pubblico nel sorgente: è una scelta consapevole.
 const REPORT_WA = "393484791772";
@@ -637,6 +637,14 @@ async function toccaMappa(e) {
 // pesante: quanto pesante dipende da quanto è lungo il giro, per questo si
 // può annullare.
 async function apriRisultatoOsm(risultato) {
+  // Un risultato senza identificativo non può caricare niente: capita solo
+  // se in memoria è rimasta una voce di un formato vecchio, e va detto
+  // chiaro invece di chiedere a Overpass la relazione "undefined".
+  if (!risultato || !risultato.idOsm) {
+    avvisa("Questo risultato è invecchiato: rifai la ricerca.", true);
+    return;
+  }
+
   const controllo = new AbortController();
   lavoro(true, `Carico la traccia di ${risultato.nome}…`, () => controllo.abort());
 
@@ -647,8 +655,16 @@ async function apriRisultatoOsm(risultato) {
     });
     apriPercorso({ ...risultato, ...traccia }, false);
   } catch (e) {
-    if (e.annullata) avvisa("Caricamento annullato.");
-    else avvisa(e.message || "Traccia non caricata.", true);
+    if (e.annullata) {
+      avvisa("Caricamento annullato.");
+    } else {
+      avvisa(e.message || "Traccia non caricata.", true);
+      // Il referto anche qui: un caricamento fallito senza referto è di
+      // nuovo un "non funziona" da indovinare. Sta nella vista Cerca, e ci
+      // si sposta apposta se si era sulla mappa.
+      mostraDiagnostica();
+      if (stato.vista === "mappa") mostraVista("cerca");
+    }
   } finally {
     lavoro(false);
   }
