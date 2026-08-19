@@ -22,7 +22,7 @@ import { cercaPunti } from "./poi.js";
 import { testo as registroRete } from "./registro.js";
 import { mostraIntro, introGiaVista } from "./intro.js";
 
-export const APP_VERSION = "0.5.22-beta";
+export const APP_VERSION = "0.5.23-beta";
 
 // Numero del canale feedback beta. Pubblico nel sorgente: è una scelta consapevole.
 const REPORT_WA = "393484791772";
@@ -588,10 +588,9 @@ function dipingiRisultatiOsm(vuoto) {
 // Toccarle non può quindi "selezionarle" — ma si può chiedere che cosa passa
 // nel punto toccato, ed è quello che uno si aspetta che succeda.
 //
-// Il raggio è stretto apposta: un dito su un telefono copre già una
-// cinquantina di metri di mappa alla scala a cui si guardano i sentieri, e
-// allargare vorrebbe dire tirare su mezza provincia a ogni tocco.
-const RAGGIO_TOCCO = 150;
+// Trecento metri attorno al dito: abbastanza stretto da non tirare su mezza
+// provincia, abbastanza largo da perdonare un tocco impreciso sulla linea.
+const RAGGIO_TOCCO = 300;
 
 async function toccaMappa(e) {
   // Durante una registrazione o mentre si segue un percorso la mappa serve a
@@ -606,10 +605,12 @@ async function toccaMappa(e) {
     const trovati = await cercaPercorsi(lat, lng, RAGGIO_TOCCO, {
       segnale: controllo.signal,
       onStato: lavoroDice,
+      // Risposta subito, anche quando è "niente": chi tocca sta esplorando.
+      rapida: true,
     });
 
     if (!trovati.length) {
-      avvisa("Nessun percorso mappato in questo punto. Prova a toccare sulla linea colorata.");
+      avvisa("Nessun percorso mappato in questo punto. Tocca la linea colorata, o usa «Cerca qui» per una ricerca completa.");
       return;
     }
 
@@ -1062,11 +1063,40 @@ function apriFuori(url) {
 // punto di partenza e si toglie di mezzo. Rifarlo peggio non aiuterebbe
 // nessuno — e ricalcolare un percorso stradale richiederebbe un altro
 // servizio pubblico da interrogare, con le stesse code di Overpass.
-function portamiAllInizio() {
+async function portamiAllInizio() {
   const percorso = stato.attivo;
   if (!percorso || !percorso.punti || !percorso.punti.length) return;
 
-  const p = percorso.punti[0];
+  // La finestra si apre ADESSO, dentro il gesto del tocco: dopo un'attesa —
+  // e il GPS è un'attesa — il browser non crede più che sia stato tu e la
+  // blocca. Si apre vuota e le si dà l'indirizzo quando lo sappiamo.
+  const finestra = preApri();
+
+  // Di regola si va all'inizio della traccia. Ma "inizio" è dove il percorso
+  // comincia per chi l'ha disegnato, non per te: su un itinerario lungo può
+  // stare a ore di strada mentre il tracciato ti passa a due chilometri da
+  // casa. Se sappiamo dove sei e l'inizio è lontano, si punta al punto del
+  // percorso più vicino a te.
+  let p = percorso.punti[0];
+  let alPiuVicino = false;
+
+  try {
+    // Il timeout della geolocalizzazione parte solo DOPO il permesso: se il
+    // telefono sta mostrando la richiesta, l'attesa sarebbe senza fine. La
+    // corsa con un timer nostro mette il tetto comunque.
+    const qui = await Promise.race([
+      posizioneAttuale({ timeout: 3000 }),
+      new Promise((_, no) => setTimeout(() => no(new Error("senza posizione")), 3500)),
+    ]);
+    const vicino = puntoDelPercorsoPiuVicino(percorso.punti, qui);
+    if (haversine(vicino, percorso.punti[0]) > 2000) {
+      p = vicino;
+      alPiuVicino = true;
+    }
+  } catch (e) {
+    /* senza posizione si va all'inizio, come sempre */
+  }
+
   const meta = `${p.lat.toFixed(6)},${p.lon.toFixed(6)}`;
 
   // Su iPhone si apre Mappe, che c'è sempre. Altrove Google Maps, che sa
@@ -1076,8 +1106,44 @@ function portamiAllInizio() {
     ? `https://maps.apple.com/?daddr=${meta}&dirflg=d`
     : `https://www.google.com/maps/dir/?api=1&destination=${meta}&travelmode=bicycling`;
 
-  avvisa("Ti porto all'inizio del percorso con le mappe del telefono.");
-  apriFuori(url);
+  avvisa(
+    alPiuVicino
+      ? "L'inizio è lontano: ti porto al punto del percorso più vicino a te."
+      : "Ti porto all'inizio del percorso con le mappe del telefono."
+  );
+
+  if (finestra) finestra.location.href = url;
+  else window.location.href = url;
+}
+
+// La finestra di appoggio per aprire un'altra app dopo un'attesa. Da icona
+// non ci sono schede e si ritorna null: si navigherà la pagina stessa.
+function preApri() {
+  const daIcona =
+    navigator.standalone === true ||
+    (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches);
+  if (daIcona) return null;
+  try {
+    return window.open("", "_blank");
+  } catch (e) {
+    return null;
+  }
+}
+
+// Il punto della traccia più vicino a `qui`. Campionato: al chilometro di
+// precisione con cui si imbocca un sentiero non servono tutti i punti.
+function puntoDelPercorsoPiuVicino(punti, qui) {
+  const passo = Math.max(1, Math.floor(punti.length / 400));
+  let migliore = punti[0];
+  let minimo = Infinity;
+  for (let i = 0; i < punti.length; i += passo) {
+    const d = haversine(qui, punti[i]);
+    if (d < minimo) {
+      minimo = d;
+      migliore = punti[i];
+    }
+  }
+  return migliore;
 }
 
 function apriReport() {

@@ -122,6 +122,16 @@ out tags;`;
       return veloci;
     }
 
+    // Modalità rapida: il tocco sulla mappa. Lì un "niente" immediato vale
+    // più di un "forse" fra quarantacinque secondi — chi tocca sta esplorando
+    // e può ritoccare un centimetro più in là, mentre la coda di Overpass se
+    // la sente tutta davanti al velo. La conferma del vuoto resta per la
+    // ricerca vera, dove "nessun percorso qui" è una conclusione.
+    if (riconosciuto && opzioni.rapida) {
+      if (opzioni.onFonte) opzioni.onFonte("waymarked");
+      return [];
+    }
+
     // Elenco vuoto. Può voler dire davvero "qui non c'è niente" — sulle
     // colline picene capita spesso — oppure che la loro copertura non arriva
     // fin qui, o che il riquadro non gli è piaciuto. Dire a qualcuno "non
