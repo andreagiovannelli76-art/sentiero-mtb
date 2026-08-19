@@ -129,3 +129,71 @@ function rete(r) {
   if (!v) return "";
   return v.length <= 4 ? v.toUpperCase() : v;
 }
+
+// La traccia di una relazione, dalla geometria precalcolata di Waymarked
+// Trails. Per un percorso enorme — il Sentiero Italia, un cammino europeo —
+// e' la differenza fra un file pronto e chiedere a Overpass di assemblare
+// migliaia di chilometri di way al volo, che e' il modo in cui si muore di
+// timeout.
+//
+// Non sappiamo con certezza in quale dei tre database stia il percorso, e
+// interrogare quello sbagliato costa un errore immediato: si prova su tutti
+// e tre insieme e vince chi ce l'ha. Ritorna una lista di segmenti
+// [[{lat,lon},...], ...] da concatenare, o lancia se nessuno lo conosce.
+const BASI = [
+  "https://mtb.waymarkedtrails.org",
+  "https://cycling.waymarkedtrails.org",
+  "https://hiking.waymarkedtrails.org",
+];
+
+export async function caricaSegmenti(idOsm, opzioni = {}) {
+  const id = Number(idOsm);
+
+  const tentativi = BASI.map(async (base) => {
+    const esito = await chiediJson(
+      `${base}/api/v1/details/relation/${id}/geometry/geojson`,
+      { headers: { Accept: "application/json" }, scadenza: 20000, segnale: opzioni.segnale }
+    );
+    if (!esito.ok) throw new Error(`stato ${esito.stato}`);
+    const segmenti = daGeoJson(esito.dati);
+    if (!segmenti.length) throw new Error("geometria vuota");
+    return segmenti;
+  });
+
+  try {
+    return await Promise.any(tentativi);
+  } catch (e) {
+    throw new Error("Traccia non disponibile su Waymarked Trails.");
+  }
+}
+
+// Estrae tutte le linee da un GeoJSON qualunque sia il suo involucro:
+// Feature, FeatureCollection, GeometryCollection, o la geometria nuda.
+function daGeoJson(g) {
+  const segmenti = [];
+
+  const linea = (coords) => {
+    const punti = [];
+    for (const c of coords || []) {
+      if (Array.isArray(c) && isFinite(c[0]) && isFinite(c[1])) {
+        // GeoJSON scrive [lon, lat].
+        punti.push({ lat: c[1], lon: c[0] });
+      }
+    }
+    if (punti.length > 1) segmenti.push(punti);
+  };
+
+  const visita = (nodo) => {
+    if (!nodo || typeof nodo !== "object") return;
+    switch (nodo.type) {
+      case "LineString": linea(nodo.coordinates); break;
+      case "MultiLineString": for (const l of nodo.coordinates || []) linea(l); break;
+      case "Feature": visita(nodo.geometry); break;
+      case "FeatureCollection": for (const f of nodo.features || []) visita(f); break;
+      case "GeometryCollection": for (const gg of nodo.geometries || []) visita(gg); break;
+    }
+  };
+
+  visita(g);
+  return segmenti;
+}

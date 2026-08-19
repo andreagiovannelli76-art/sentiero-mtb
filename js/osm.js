@@ -4,7 +4,7 @@
 import { haversine, lunghezza } from "./geo.js";
 import { chiediJson } from "./rete.js";
 import { daCache, inCache } from "./db.js";
-import { cercaPercorsi as cercaSuWaymarked } from "./waymarked.js";
+import { cercaPercorsi as cercaSuWaymarked, caricaSegmenti } from "./waymarked.js";
 
 // Overpass è un servizio pubblico e gratuito, tenuto in piedi da volontari:
 // nelle ore di punta una richiesta può restare in coda per un minuto. Non è
@@ -195,24 +195,45 @@ function leggiElenco(salvato) {
 // Secondo tempo: la traccia vera di una sola relazione.
 // Ritorna { punti, distanza, fondo, frammentato }.
 export async function caricaTraccia(idOsm, opzioni = {}) {
-  // Le way servono due volte: con la geometria, per la traccia, e con i soli
-  // tag, per sapere che fondo hanno. I tag costano pochissimo rispetto alla
-  // geometria, che infatti non si richiede due volte.
-  //
-  // "body" e non "tags": tags stampa id e tag ma OMETTE i membri della
-  // relazione, e senza membri non arriva nessuna geometria da cui ricavare
-  // la traccia. È il motivo per cui la v0.4 non trovava mai niente.
+  const chiave = `traccia2:${Number(idOsm)}`;
+
+  const salvata = opzioni.ignoraCache ? null : await daCache(chiave, VALIDITA_TRACCIA);
+  if (salvata && salvata.traccia) return salvata.traccia;
+  // Le voci salvate col vecchio formato (la risposta grezza di Overpass)
+  // restano leggibili: si riparsano e via.
+  if (salvata && salvata.elements) return traccaDaOverpass(salvata);
+
+  // Prima la geometria precalcolata: un file pronto invece di chiedere a
+  // Overpass di assemblare la relazione way per way. Per un anello di paese
+  // cambia poco, per un cammino nazionale e' la differenza fra aprirsi e
+  // morire di timeout. Si rinuncia al fondo del sentiero — quello lo sa solo
+  // Overpass, dai tag delle way — ma una scheda senza fondo e' utile, un
+  // timeout non lo e'.
+  try {
+    const segmenti = await caricaSegmenti(idOsm, opzioni);
+    const risultato = costruisci(segmenti, null);
+    await inCache(chiave, { traccia: risultato });
+    return risultato;
+  } catch (e) {
+    if (e.annullata) throw e;
+    console.warn("Geometria Waymarked non disponibile, passo a Overpass:", e.message);
+  }
+
+  // Riserva: Overpass, che in cambio della lentezza ci dice anche il fondo.
   const query = `[out:json][timeout:60];
 relation(${Number(idOsm)})->.rotta;
 .rotta out body geom;
 way(r.rotta);
 out tags;`;
 
-  const chiave = `traccia:${Number(idOsm)}`;
-  const salvata = opzioni.ignoraCache ? null : await daCache(chiave, VALIDITA_TRACCIA);
-  const dati = salvata || (await interroga(query, opzioni));
-  if (!salvata) await inCache(chiave, dati);
+  const dati = await interroga(query, opzioni);
+  const risultato = traccaDaOverpass(dati);
+  await inCache(chiave, { traccia: risultato });
+  return risultato;
+}
 
+// Da una risposta Overpass completa (relazione + tag delle way) alla traccia.
+function traccaDaOverpass(dati) {
   const elementi = (dati && dati.elements) || [];
 
   // Prima i tag delle way, poi la relazione che li userà.
@@ -227,6 +248,12 @@ out tags;`;
   );
   const segmenti = way.map((m) => m.geometry.map((g) => ({ lat: g.lat, lon: g.lon })));
 
+  return costruisci(segmenti, fondoPrevalente(way, tagWay));
+}
+
+// Concatena i segmenti e completa la scheda. `fondo` può essere null quando
+// la geometria arriva già pronta e i tag delle way non ci sono.
+function costruisci(segmenti, fondo) {
   if (!segmenti.length) {
     throw new Error("Questo percorso non ha una traccia utilizzabile su OpenStreetMap.");
   }
@@ -239,7 +266,7 @@ out tags;`;
   return {
     punti,
     distanza: lunghezza(punti),
-    fondo: fondoPrevalente(way, tagWay),
+    fondo,
     frammentato,
   };
 }

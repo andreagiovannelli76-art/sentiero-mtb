@@ -152,6 +152,7 @@ Principio: **prima i percorsi esistenti (OSM), poi la community, poi il premium.
 | 0.5.19 ✅ | Un «non c'è niente» va confermato dalla seconda fonte prima di annunciarlo | rilasciata |
 | 0.5.20 ✅ | Anche i sentieri escursionistici (route=hiking, rete CAI) fra i risultati, etichettati «Sentiero» | rilasciata: il 7 e l'8 sulla mappa ora si aprono |
 | 0.5.21 ✅ | Tutte le categorie percorribili (ciclovie di ogni rete, hiking e foot) · filtro per tipo nei risultati | rilasciata |
+| 0.5.22 ✅ | Traccia dalla geometria precalcolata di Waymarked Trails, Overpass di riserva (che in cambio dà il fondo) | rilasciata: i cammini enormi non muoiono più di timeout |
 | 0.6 | Backend Supabase: auth, libreria pubblica condivisa, "rendi pubblico" un giro, foto, autore, like/commenti | trasforma il tool in community |
 | 0.7 | Schede guida: descrizione tecnica, stagionalità · punti pericolosi | i POI acqua/rifugi sono già arrivati in 0.5.5 |
 | 0.8 | Guide premium: flag `premium`, Stripe, accesso a pagamento · tile offline per zona | monetizzazione |
