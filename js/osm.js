@@ -122,15 +122,6 @@ out tags;`;
       return veloci;
     }
 
-    // Modalità rapida: il tocco sulla mappa. Lì un "niente" immediato vale
-    // più di un "forse" fra quarantacinque secondi — chi tocca sta esplorando
-    // e può ritoccare un centimetro più in là, mentre la coda di Overpass se
-    // la sente tutta davanti al velo. La conferma del vuoto resta per la
-    // ricerca vera, dove "nessun percorso qui" è una conclusione.
-    if (riconosciuto && opzioni.rapida) {
-      if (opzioni.onFonte) opzioni.onFonte("waymarked");
-      return [];
-    }
 
     // Elenco vuoto. Può voler dire davvero "qui non c'è niente" — sulle
     // colline picene capita spesso — oppure che la loro copertura non arriva
@@ -191,6 +182,91 @@ function daOverpass(dati) {
   // ritrovare un nome che conosci. La distanza esatta la sa solo la traccia,
   // e arriva quando ne apri uno.
   return percorsi.sort((a, b) => a.nome.localeCompare(b.nome, "it"));
+}
+
+// ------------------------------------------------------------------ il tocco
+
+// "Cosa passa in questo punto?" — la domanda del dito sulla mappa.
+//
+// L'archivio veloce non sa rispondere sui riquadri piccolissimi: interrogato
+// su trecento metri dice "niente" anche dove il percorso c'è. Verificato sul
+// campo — prima del parallelo, il suo vuoto veniva smentito da Overpass una
+// volta su una. Quindi qui si fanno DUE domande insieme, non in fila:
+//
+//   · a Overpass, quella precisa: "quali percorsi contengono le strade in
+//     questi 150 metri". È una domanda leggera — poche way, appartenenza
+//     indicizzata — il suo costo vero è la coda, non il lavoro.
+//   · all'archivio veloce, quella larga: "cosa c'è nel chilometro attorno".
+//     Sui riquadri da chilometro risponde bene, e risponde subito.
+//
+// Se la precisa arriva in tempo si usa lei. Se tarda e la larga ha trovato
+// qualcosa, si mostra quello — "in zona" — invece di far scadere il velo.
+// Ritorna { percorsi, precisione: "punto" | "zona" }.
+const RAGGIO_PUNTO = 150;
+const RAGGIO_ZONA = 1200;
+const PAZIENZA_PUNTO = 12000;
+
+export async function cosaPassaQui(lat, lon, opzioni = {}) {
+  const chiave = `tocco:${lat.toFixed(4)},${lon.toFixed(4)}`;
+  const salvato = await daCache(chiave, VALIDITA_ELENCO);
+  if (salvato) return salvato;
+
+  const dLat = (r) => r / 111320;
+  const dLon = (r) => r / (111320 * Math.cos((lat * Math.PI) / 180));
+
+  const riquadro = [
+    (lat - dLat(RAGGIO_PUNTO)).toFixed(5),
+    (lon - dLon(RAGGIO_PUNTO)).toFixed(5),
+    (lat + dLat(RAGGIO_PUNTO)).toFixed(5),
+    (lon + dLon(RAGGIO_PUNTO)).toFixed(5),
+  ].join(",");
+
+  const query = `[out:json][timeout:25][bbox:${riquadro}];
+way["highway"];
+rel(bw)["route"~"^(mtb|bicycle|hiking|foot)$"];
+out tags;`;
+
+  // Le due domande partono insieme.
+  const larga = cercaSuWaymarked(
+    lat - dLat(RAGGIO_ZONA), lon - dLon(RAGGIO_ZONA),
+    lat + dLat(RAGGIO_ZONA), lon + dLon(RAGGIO_ZONA),
+    opzioni
+  ).then((r) => (r.riconosciuto ? r.percorsi : null)).catch(() => null);
+
+  const precisa = interroga(query, opzioni).then(
+    (dati) => ({ esito: "ok", percorsi: daOverpass(dati) }),
+    (e) => ({ esito: "errore", errore: e })
+  );
+
+  const consegna = async (risultato) => {
+    await inCache(chiave, risultato);
+    return risultato;
+  };
+
+  // Prima finestra: la precisa ha PAZIENZA_PUNTO millisecondi.
+  const primo = await Promise.race([precisa, attesa(PAZIENZA_PUNTO, opzioni.segnale).then(() => null)]);
+
+  if (primo && primo.esito === "ok") {
+    return consegna({ percorsi: primo.percorsi, precisione: "punto" });
+  }
+  if (primo && primo.esito === "errore") {
+    if (primo.errore.annullata) throw primo.errore;
+    const vicini = await larga;
+    if (vicini) return consegna({ percorsi: vicini, precisione: "zona" });
+    throw primo.errore;
+  }
+
+  // La precisa è ancora in coda: se la larga ha una risposta, basta quella.
+  const vicini = await larga;
+  if (vicini && vicini.length) {
+    return consegna({ percorsi: vicini, precisione: "zona" });
+  }
+
+  // La larga non sa niente: tanto vale aspettare la precisa fino in fondo.
+  const fine = await precisa;
+  if (fine.esito === "ok") return consegna({ percorsi: fine.percorsi, precisione: "punto" });
+  if (vicini) return consegna({ percorsi: [], precisione: "zona" });
+  throw fine.errore;
 }
 
 // In memoria può esserci una risposta di Overpass (con "elements") oppure un

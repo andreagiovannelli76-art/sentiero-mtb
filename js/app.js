@@ -15,14 +15,14 @@ import { Tracker, posizioneAttuale, osservaPosizione, tieniSchermoAcceso } from 
 import { Guida } from "./follow.js";
 import { creaLink, leggiLink, LIMITE_URL } from "./share.js";
 import { correggiQuote } from "./elevation.js";
-import { cercaPercorsi, caricaTraccia } from "./osm.js";
+import { cercaPercorsi, caricaTraccia, cosaPassaQui } from "./osm.js";
 import { cercaLuogo } from "./geocode.js";
 import { previsione, puntoPiuAlto } from "./weather.js";
 import { cercaPunti } from "./poi.js";
 import { testo as registroRete } from "./registro.js";
 import { mostraIntro, introGiaVista } from "./intro.js";
 
-export const APP_VERSION = "0.5.23-beta";
+export const APP_VERSION = "0.5.24-beta";
 
 // Numero del canale feedback beta. Pubblico nel sorgente: è una scelta consapevole.
 const REPORT_WA = "393484791772";
@@ -588,10 +588,6 @@ function dipingiRisultatiOsm(vuoto) {
 // Toccarle non può quindi "selezionarle" — ma si può chiedere che cosa passa
 // nel punto toccato, ed è quello che uno si aspetta che succeda.
 //
-// Trecento metri attorno al dito: abbastanza stretto da non tirare su mezza
-// provincia, abbastanza largo da perdonare un tocco impreciso sulla linea.
-const RAGGIO_TOCCO = 300;
-
 async function toccaMappa(e) {
   // Durante una registrazione o mentre si segue un percorso la mappa serve a
   // guardare dove sei: un tocco è quasi sempre una manovra, non una domanda.
@@ -602,12 +598,11 @@ async function toccaMappa(e) {
   lavoro(true, "Guardo cosa passa di qui…", () => controllo.abort());
 
   try {
-    const trovati = await cercaPercorsi(lat, lng, RAGGIO_TOCCO, {
+    const { percorsi: trovati, precisione } = await cosaPassaQui(lat, lng, {
       segnale: controllo.signal,
       onStato: lavoroDice,
-      // Risposta subito, anche quando è "niente": chi tocca sta esplorando.
-      rapida: true,
     });
+    const inZona = precisione === "zona";
 
     if (!trovati.length) {
       avvisa("Nessun percorso mappato in questo punto. Tocca la linea colorata, o usa «Cerca qui» per una ricerca completa.");
@@ -617,6 +612,7 @@ async function toccaMappa(e) {
     // Uno solo: è quello che volevi, si apre senza farti scegliere fra uno.
     if (trovati.length === 1) {
       lavoro(false);
+      if (inZona) avvisa("Trovato un percorso qui in zona.");
       await apriRisultatoOsm(trovati[0]);
       return;
     }
@@ -624,7 +620,11 @@ async function toccaMappa(e) {
     // Più di uno: qui passano due sentieri, e quale sia lo sai tu.
     mostraRisultatiOsm(trovati);
     mostraVista("cerca");
-    avvisa(`${trovati.length} percorsi passano di qui: scegli quale.`);
+    avvisa(
+      inZona
+        ? `${trovati.length} percorsi qui in zona: scegli quale.`
+        : `${trovati.length} percorsi passano di qui: scegli quale.`
+    );
   } catch (err) {
     if (err.annullata) avvisa("Annullato.");
     else avvisa(err.message || "Non riesco a guardare qui.", true);
